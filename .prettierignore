@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+dist
+build
+
+# Tauri
+src-tauri/target
+
+# Logs
+*.log
+
+# Lock files
+package-lock.json
+bun.lockb
+pnpm-lock.yaml
+yarn.lock
+
+# Cache
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
