@@ -11,7 +11,12 @@
       "Bash(cargo run:*)",
       "Bash(git init:*)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: initial commit - AI-LOT trading platform\n\n- Tauri + Vue 3 desktop application\n- User authentication with Argon2id password hashing\n- Database schema with migrations\n- Strategy editor and backtesting framework\n- Multi-exchange trading support\n- Risk management and monitoring\n- Default admin account \\(admin/admin123\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(taskkill:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)"
     ]
   }
 }
