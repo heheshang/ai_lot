@@ -18,10 +18,11 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(git commit:*)",
-      "Bash(ls -la \"D:\\\\soft\\\\workspace\\\\ai\\\\ai-lot\\\\src-tauri\\\\src\"\" 2>/dev/null || echo \"No such directory \")",
+      "Bash(ls -la \"D:\\\\soft\\\\workspace\\\\ai\\\\ai-lot\\\\src-tauri\\\\src\" 2>/dev/null || echo \"No such directory\")",
       "Bash(dir:*)",
       "Bash(npm run build)",
-      "Bash(bun add:*)"
+      "Bash(bun add:*)",
+      "Bash(bun run dev)"
     ]
   }
 }
