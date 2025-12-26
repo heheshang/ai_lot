@@ -31,8 +31,12 @@ thiserror = "1"
 argon2 = "0.5"
 aes-gcm = "0.10"
 async-trait = "0.1"
+reqwest = { version = "0.12", features = ["json"] }
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
 log = "0.4"
 env_logger = "0.11"
+rquickjs = { version = "0.9", features = ["array-buffer", "parallel"] }
 
 # sqlx 编译时检查 (可选，需要 SQLX_OFFLINE=true)
 # [sqlx]

@@ -4,9 +4,11 @@ pub mod core;
 pub mod infrastructure;
 pub mod models;
 pub mod repository;
+pub mod services;
 
 // 重新导出常用类型
 pub use infrastructure::database::Database;
+pub use services::MarketService;
 
 // 导入 Tauri Manager trait 以使用状态管理
 use tauri::Manager;
@@ -48,6 +50,21 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::user::login,
             commands::user::get_current_user,
+            commands::market::market_subscribe_ticker,
+            commands::market::market_get_klines,
+            commands::market::market_get_symbols,
+            commands::market::market_get_status,
+            commands::market::market_unsubscribe_ticker,
+            commands::strategy::strategy_list,
+            commands::strategy::strategy_get,
+            commands::strategy::strategy_save,
+            commands::strategy::strategy_delete,
+            commands::strategy_test::strategy_test_execute,
+            commands::strategy_test::strategy_validate_code,
+            commands::strategy_engine::strategy_engine_start,
+            commands::strategy_engine::strategy_engine_stop,
+            commands::strategy_engine::strategy_engine_list,
+            commands::strategy_engine::strategy_engine_get,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

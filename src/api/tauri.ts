@@ -9,6 +9,8 @@ import type {
   BacktestReport,
   Order,
   Position,
+  StrategyConfig,
+  InstanceInfo,
 } from '@/types';
 
 /**
@@ -72,6 +74,12 @@ export const marketApi = {
     invoke('market_subscribe_ticker', { symbols }),
 
   /**
+   * 取消订阅行情
+   */
+  unsubscribeTicker: (symbols: string[]) =>
+    invokeRaw('market_unsubscribe_ticker', { symbols }),
+
+  /**
    * 获取 K 线数据
    */
   getKlines: (symbol: string, interval: string, limit: number) =>
@@ -82,6 +90,12 @@ export const marketApi = {
    */
   getSymbols: () =>
     invoke<string[]>('market_get_symbols'),
+
+  /**
+   * 获取市场状态
+   */
+  getStatus: () =>
+    invokeRaw<any>('market_get_status'),
 };
 
 // ============== 策略 API ==============
@@ -89,26 +103,39 @@ export const strategyApi = {
   /**
    * 获取策略列表
    */
-  list: () =>
-    invoke<Strategy[]>('strategy_list'),
+  list: (userId: string) =>
+    invoke<Strategy[]>('strategy_list', { user_id: userId }),
 
   /**
    * 获取策略详情
    */
   get: (id: string) =>
-    invoke<Strategy>('strategy_get', { id }),
+    invokeRaw<Strategy | null>('strategy_get', { id }),
 
   /**
    * 保存策略
    */
   save: (strategy: Strategy) =>
-    invoke<string>('strategy_save', { strategy }),
+    invokeRaw<Strategy>('strategy_save', {
+      request: {
+        id: strategy.id,
+        user_id: strategy.userId,
+        name: strategy.name,
+        description: strategy.description,
+        code: strategy.code,
+        language: strategy.language,
+        parameters: strategy.parameters,
+        parameter_values: strategy.parameterValues,
+        category: strategy.category,
+        tags: strategy.tags,
+      },
+    }),
 
   /**
    * 删除策略
    */
   delete: (id: string) =>
-    invoke('strategy_delete', { id }),
+    invokeRaw('strategy_delete', { id }),
 };
 
 // ============== 回测 API ==============
@@ -151,4 +178,31 @@ export const tradeApi = {
    */
   getOrders: () =>
     invoke<Order[]>('trade_get_orders'),
+};
+
+// ============== StrategyEngine API ==============
+export const strategyEngineApi = {
+  /**
+   * 启动策略实例
+   */
+  start: (config: StrategyConfig) =>
+    invokeRaw<string>('strategy_engine_start', { config }),
+
+  /**
+   * 停止策略实例
+   */
+  stop: (id: string) =>
+    invokeRaw<void>('strategy_engine_stop', { id }),
+
+  /**
+   * 列出所有策略实例
+   */
+  list: () =>
+    invokeRaw<InstanceInfo[]>('strategy_engine_list'),
+
+  /**
+   * 获取单个策略实例信息
+   */
+  get: (id: string) =>
+    invokeRaw<InstanceInfo | null>('strategy_engine_get', { id }),
 };

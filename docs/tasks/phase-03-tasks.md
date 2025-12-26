@@ -36,7 +36,7 @@
 
 **依赖**: 无
 
-**实施步骤**:
+#### 实施步骤
 
 1. 安装依赖：
 ```bash
@@ -111,10 +111,27 @@ watch(() => props.modelValue, (newValue) => {
 ```
 
 #### 验收标准
-- [ ] Monaco Editor 正常显示
-- [ ] 代码高亮正常
-- [ ] 支持 JavaScript 语法
-- [ ] 内容双向绑定正常
+- [x] Monaco Editor 正常显示
+- [x] 代码高亮正常
+- [x] 支持 JavaScript 语法
+- [x] 内容双向绑定正常
+
+#### 产物
+- `src/components/MonacoEditor.vue` ✓ (263行)
+- `package.json` ✓ (添加依赖)
+- `docs/verification/P3-01-verification-report.md` ✓
+
+**状态**: ✅ 已完成
+- 安装了 monaco-editor@0.55.1 和 @monaco-editor/loader@1.7.0
+- 实现了 MonacoEditor 组件（263行）
+- 实现了完整的 props API（modelValue, language, theme, readOnly, fontSize, minimap, wordWrap, lineNumbers）
+- 实现了事件（update:modelValue, ready）
+- 实现了响应式布局（ResizeObserver）
+- 实现了暴露方法（getEditor, getValue, setValue, focus, layout）
+- 实现了代码高亮和智能提示
+- 实现了 v-model 双向绑定
+- 构建通过（26.48秒）
+- [验证报告](../verification/P3-01-verification-report.md)
 
 ---
 
@@ -122,7 +139,7 @@ watch(() => props.modelValue, (newValue) => {
 
 **依赖**: P3-01
 
-**实施步骤**:
+#### 实施步骤
 
 创建 `src/components/ParameterEditor.vue`：
 ```vue
@@ -193,195 +210,250 @@ watch(values, (newValues) => {
 </script>
 ```
 
+#### 验收标准
+- [x] 可编辑策略参数
+- [x] 参数类型正确显示
+- [x] 默认值显示正确
+- [x] 编译无错误
+
+#### 产物
+- `src/components/ParameterEditor.vue` ✓ (340行)
+- `docs/verification/P3-02-verification-report.md` ✓
+
+**状态**: ✅ 已完成
+- 实现了 ParameterEditor 组件（340行）
+- 实现了 4 种参数类型支持（number, string, boolean, select）
+- 实现了类型专用输入控件（InputNumber, Switch, Select, Input）
+- 实现了 min/max/step 约束（number 类型）
+- 实现了默认值显示
+- 实现了单个和全部重置功能
+- 实现了变更追踪（changedCount）
+- 实现了底部统计摘要
+- 实现了禁用状态支持
+- 实现了 v-model 双向绑定
+- 实现了类型颜色编码
+- 构建通过（20.98秒）
+- [验证报告](../verification/P3-02-verification-report.md)
+
 ---
 
 ### P3-03: 实现 StrategyEditor 页面
 
 **依赖**: P3-01, P3-02
 
-**实施步骤**:
+#### 验收标准
+- [x] 策略编辑器页面正常显示
+- [x] Monaco Editor 集成正常
+- [x] Parameter Editor 集成正常
+- [x] 参数管理功能正常
+- [x] 保存/取消功能正常
+- [x] 编译无错误
 
-创建 `src/views/Strategy/StrategyEditor.vue`：
-```vue
-<template>
-  <div class="strategy-editor">
-    <el-card>
-      <template #header>
-        <div class="header">
-          <h2>{{ isEdit ? '编辑策略' : '新建策略' }}</h2>
-          <div class="actions">
-            <el-button @click="$router.back()">取消</el-button>
-            <el-button type="primary" @click="handleSave" :loading="saving">
-              保存
-            </el-button>
-          </div>
-        </div>
-      </template>
+#### 产物
+- `src/views/Strategy/StrategyEditor.vue` ✓ (645行)
+- `docs/verification/P3-03-verification-report.md` ✓
 
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="策略名称" required>
-          <el-input v-model="form.name" placeholder="请输入策略名称" />
-        </el-form-item>
-
-        <el-form-item label="策略描述">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="2"
-            placeholder="请输入策略描述"
-          />
-        </el-form-item>
-
-        <el-form-item label="策略代码" required>
-          <MonacoEditor
-            v-model="form.code"
-            language="javascript"
-            :style="{ height: '400px' }"
-          />
-        </el-form-item>
-
-        <el-form-item label="策略参数">
-          <ParameterEditor
-            v-model="form.parameterValues"
-            :parameters="form.parameters"
-          />
-        </el-form-item>
-      </el-form>
-    </el-card>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import MonacoEditor from '@/components/MonacoEditor.vue';
-import ParameterEditor from '@/components/ParameterEditor.vue';
-import type { Strategy } from '@/types';
-
-const route = useRoute();
-const router = useRouter();
-
-const isEdit = ref(false);
-const saving = ref(false);
-
-const form = ref<Strategy>({
-  id: '',
-  userId: '',
-  name: '',
-  description: '',
-  code: `// 策略初始化
-function onInit() {
-  // 在这里编写初始化逻辑
-}
-
-// K线更新时调用
-function onBar(kline) {
-  // 在这里编写交易逻辑
-  // 返回交易信号或 null
-
-  // 示例: 简单的均线策略
-  if (kline.close > kline.open) {
-    return {
-      action: 'buy',
-      quantity: 0.1,
-      price: kline.close
-    };
-  }
-
-  return null;
-}
-
-// 策略停止时调用
-function onStop() {
-  // 在这里编写清理逻辑
-}
-`,
-  language: 'javascript',
-  parameters: [
-    {
-      name: 'fastPeriod',
-      type: 'number',
-      default: 5,
-      min: 1,
-      max: 100,
-      step: 1,
-      description: '快速均线周期',
-    },
-    {
-      name: 'slowPeriod',
-      type: 'number',
-      default: 20,
-      min: 1,
-      max: 200,
-      step: 1,
-      description: '慢速均线周期',
-    },
-  ],
-  parameterValues: {
-    fastPeriod: 5,
-    slowPeriod: 20,
-  },
-  category: 'trend',
-  tags: ['ma', 'trend'],
-  version: 1,
-  status: 'draft',
-  createdAt: 0,
-  updatedAt: 0,
-});
-
-async function handleSave() {
-  if (!form.value.name) {
-    ElMessage.warning('请输入策略名称');
-    return;
-  }
-
-  saving.value = true;
-  try {
-    // 调用保存 API
-    ElMessage.success(isEdit.value ? '策略已更新' : '策略已创建');
-    router.push('/strategy');
-  } catch (error) {
-    ElMessage.error('保存失败：' + (error as Error).message);
-  } finally {
-    saving.value = false;
-  }
-}
-
-onMounted(() => {
-  const id = route.params.id as string;
-  if (id) {
-    isEdit.value = true;
-    // 加载策略数据
-  }
-});
-</script>
-
-<style scoped>
-.strategy-editor {
-  padding: 0;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header h2 {
-  margin: 0;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-}
-</style>
-```
+**状态**: ✅ 已完成
+- 实现了 StrategyEditor 页面（645行）
+- 实现了策略基本信息表单（名称、分类、描述、标签）
+- 实现了 Monaco Editor 代码编辑区集成
+- 实现了代码格式化功能
+- 实现了参数管理表格（添加/删除参数）
+- 实现了参数值编辑器集成
+- 实现了参数预览区域
+- 实现了保存/取消处理
+- 实现了未保存更改检测
+- 实现了默认策略模板（onInit, onBar, onStop + MA交叉示例）
+- 实现了路由参数支持（编辑/新建模式）
+- 构建通过（23.96秒）
+- [验证报告](../verification/P3-03-verification-report.md)
 
 ---
 
-### P3-05 ~ P3-08: 策略引擎
+### P3-04: 实现策略保存/加载
+
+**依赖**: P3-03
+
+#### 验收标准
+- [x] 策略可保存到数据库
+- [x] 策略可从数据库加载
+- [x] 策略列表可获取
+- [x] 前端 API 正确调用
+- [x] 后端编译无错误
+- [x] 前端编译无错误
+
+#### 产物
+- `src-tauri/src/models/strategy.rs` ✓ (200行)
+- `src-tauri/src/repository/strategy_repo.rs` ✓ (133行)
+- `src-tauri/src/commands/strategy.rs` ✓ (144行)
+- `src/api/tauri.ts` ✓ (更新 strategyApi)
+- `src/views/Strategy/StrategyEditor.vue` ✓ (使用实际 API)
+- `docs/verification/P3-04-verification-report.md` ✓
+
+**状态**: ✅ 已完成
+- 创建了 Strategy 相关数据模型（Strategy, StrategyDto, StrategyParameter, SaveStrategyRequest, StrategyListItem）
+- 实现了 StrategyRepository（find_by_user, find_by_id_dto, save, delete, name_exists）
+- 实现了 strategy Tauri commands（strategy_list, strategy_get, strategy_save, strategy_delete）
+- 实现了前后端类型映射（JSON 序列化/反序列化）
+- 更新了前端 strategyApi（list, get, save, delete）
+- 更新了 StrategyEditor 使用实际 API 调用
+- 实现了编辑模式加载策略数据
+- 实现了保存时的用户 ID 验证
+- 后端编译通过（53.50秒，仅警告）
+- 前端构建通过（21.97秒）
+- [验证报告](../verification/P3-04-verification-report.md)
+
+---
+
+### P3-05: 实现策略脚本执行
+
+**依赖**: P3-04
+
+#### 验收标准
+- [x] JavaScript 引擎可执行用户代码
+- [x] 支持策略生命周期回调 (onInit, onBar, onStop)
+- [x] 可传递参数给策略
+- [x] 可传递K线数据给策略
+- [x] 可返回交易信号
+- [x] 错误处理正确
+- [x] 后端编译无错误
+- [x] 单元测试通过
+
+#### 产物
+- `src-tauri/src/core/strategy/script.rs` ✓ (250行)
+- `src-tauri/src/core/strategy/mod.rs` ✓ (3行)
+- `src-tauri/src/commands/strategy_test.rs` ✓ (85行)
+- `src-tauri/Cargo.toml` ✓ (添加 rquickjs 依赖)
+- `docs/verification/P3-05-verification-report.md` ✓
+
+**状态**: ✅ 已完成
+- 集成了 rquickjs (QuickJS) JavaScript 引擎
+- 实现了 ScriptExecutor (onInit, onBar, onStop 方法)
+- 实现了策略测试命令 (strategy_test_execute, strategy_validate_code)
+- 实现了参数传递 (context.parameters)
+- 实现了 K线数据传递 (kline 对象)
+- 实现了信号返回值处理 (JSON 序列化/反序列化)
+- 实现了错误处理 (anyhow::Error 传播)
+- 后端编译通过 (18.27秒，仅警告)
+- 单元测试通过 (4/4 tests passed)
+- [验证报告](../verification/P3-05-verification-report.md)
+
+---
+
+### P3-06: 实现策略上下文 API
+
+**依赖**: P3-05
+
+#### 验收标准
+- [x] Storage API 功能完整 (set, get, has, keys, remove, clear)
+- [x] Storage 可跨回调持久化
+- [x] getHistory API 返回历史数据
+- [x] getHistory 支持过滤 (symbol, timeframe, count)
+- [x] 后端编译无错误
+- [x] 单元测试通过
+
+#### 产物
+- `src-tauri/src/core/strategy/script.rs` ✓ (545行，+295行)
+- `docs/verification/P3-06-verification-report.md` ✓
+
+**状态**: ✅ 已完成
+- 实现了 Storage API (set, get, has, keys, remove, clear)
+- 实现了 getHistory API (支持 symbol/timeframe/count 过滤)
+- 实现了存储数据注入 (prepare_storage_js 方法)
+- 实现了历史数据序列化注入
+- 实现了移动平均策略示例
+- 后端编译通过 (36.62秒，仅警告)
+- 单元测试通过 (7/7 tests passed)
+- [验证报告](../verification/P3-06-verification-report.md)
+
+---
+
+### P3-07: 实现 StrategyEngine
+
+**依赖**: P3-05, P3-06
+
+#### 验收标准
+- [x] 策略引擎可启动实例
+- [x] 策略引擎可停止实例
+- [x] 策略引擎可列出实例
+- [x] 策略引擎可获取实例信息
+- [x] 订阅市场事件
+- [x] 执行策略回调 (onInit, onBar, onStop)
+- [x] 处理策略信号
+- [x] 后端编译无错误
+- [x] 单元测试通过
+
+#### 产物
+- `src-tauri/src/core/strategy/engine.rs` ✓ (~350行)
+  - StrategyEngine, RunningInstance, StrategyConfig
+  - InstanceStatus, InstanceInfo
+- `src-tauri/src/commands/strategy_engine.rs` ✓ (48行)
+  - strategy_engine_start, strategy_engine_stop
+  - strategy_engine_list, strategy_engine_get
+- `src-tauri/src/infrastructure/database.rs` ✓
+  - 添加 EventBus 和 StrategyEngine 单例
+- `docs/verification/P3-07-verification-report.md` ✓
+
+**状态**: ✅ 已完成
+- 实现了 StrategyEngine (管理多个运行实例)
+- 实现了 RunningInstance (策略生命周期管理)
+- 实现了策略配置 (StrategyConfig)
+- 实现了实例状态 (InstanceStatus: Starting/Running/Stopping/Stopped/Error)
+- 实现了 Tauri 命令 (start, stop, list, get)
+- 实现了市场事件订阅和过滤 (symbol, timeframe)
+- 实现了历史数据缓冲 (每symbol 1000根K线)
+- 实现了优雅关闭 (broadcast channel)
+- 后端编译通过 (37.26秒，仅警告)
+- 单元测试通过 (2/2 tests passed)
+- [验证报告](../verification/P3-07-verification-report.md)
+
+---
+
+### P3-08: 实现策略实例管理
+
+**依赖**: P3-07
+
+#### 验收标准
+- [x] 实例列表展示
+- [x] 启动策略功能
+- [x] 停止策略功能
+- [x] 状态显示
+- [x] 前端编译无错误
+- [x] 后端编译无错误
+- [x] 导航菜单集成
+
+#### 产物
+- `src/views/Strategy/StrategyInstances.vue` ✓ (~250行)
+  - 实例列表表格
+  - 启动策略对话框
+  - 停止确认对话框
+  - 自动刷新 (5秒间隔)
+- `src/types/index.ts` ✓
+  - 新增: InstanceStatus, StrategyConfig, InstanceInfo
+- `src/api/tauri.ts` ✓
+  - 新增: strategyEngineApi (start, stop, list, get)
+- `src/router/index.ts` ✓
+  - 新增: /strategy/instances 路由
+- `src/views/Layout.vue` ✓
+  - 新增: "运行实例" 菜单项
+- `docs/verification/P3-08-verification-report.md` ✓
+
+**状态**: ✅ 已完成
+- 实现了策略实例管理页面 (StrategyInstances.vue)
+- 实现了实例列表显示 (表格视图)
+- 实现了启动策略对话框 (表单验证)
+- 实现了停止策略功能 (确认对话框)
+- 实现了状态指示器 (颜色编码标签)
+- 实现了自动刷新 (每5秒)
+- 实现了路由配置
+- 实现了导航菜单集成
+- 前端编译通过 (26.56秒)
+- 后端编译通过 (3.27秒)
+- [验证报告](../verification/P3-08-verification-report.md)
+
+---
+
+### P3-09 ~ P3-13: 回测引擎
 
 **核心实现**：
 

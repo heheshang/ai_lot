@@ -2,13 +2,18 @@ use anyhow::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 use tauri::{AppHandle, Manager};
+use tokio::sync::RwLock;
 
-use crate::repository::UserRepository;
+use crate::repository::{UserRepository, StrategyRepository};
 use crate::infrastructure::audit::AuditLogger;
+use crate::core::{EventBus, StrategyEngine};
 
 pub struct Database {
     pub pool: SqlitePool,
+    event_bus: Arc<EventBus>,
+    strategy_engine: Arc<StrategyEngine>,
 }
 
 impl Database {
@@ -37,7 +42,19 @@ impl Database {
 
         log::info!("Database connected successfully: {}", db_path.display());
 
-        Ok(Self { pool })
+        // 创建 EventBus
+        let event_bus = Arc::new(EventBus::new());
+        log::info!("EventBus initialized");
+
+        // 创建 StrategyEngine
+        let strategy_engine = Arc::new(StrategyEngine::new(event_bus.clone()));
+        log::info!("StrategyEngine initialized");
+
+        Ok(Self {
+            pool,
+            event_bus,
+            strategy_engine,
+        })
     }
 
     /// 运行数据库迁移
@@ -58,9 +75,24 @@ impl Database {
         UserRepository::new(self.pool.clone())
     }
 
+    /// 获取 Strategy Repository
+    pub fn strategy_repo(&self) -> StrategyRepository {
+        StrategyRepository::new(self.pool.clone())
+    }
+
     /// 获取审计日志记录器
     pub fn audit_logger(&self) -> AuditLogger {
         AuditLogger::new(self.pool.clone())
+    }
+
+    /// 获取 EventBus
+    pub fn get_event_bus(&self) -> Arc<EventBus> {
+        self.event_bus.clone()
+    }
+
+    /// 获取 StrategyEngine
+    pub fn get_strategy_engine(&self) -> Arc<StrategyEngine> {
+        self.strategy_engine.clone()
     }
 }
 

@@ -29,6 +29,7 @@
             <span>策略</span>
           </template>
           <el-menu-item index="/strategy">策略列表</el-menu-item>
+          <el-menu-item index="/strategy/instances">运行实例</el-menu-item>
           <el-menu-item index="/strategy/editor">新建策略</el-menu-item>
         </el-sub-menu>
 
@@ -145,6 +146,10 @@ const activeMenu = computed(() => {
   // 精确匹配策略编辑器路径
   if (path.startsWith('/strategy/editor')) {
     return '/strategy/editor';
+  }
+  // 精确匹配策略实例路径
+  if (path.startsWith('/strategy/instances')) {
+    return '/strategy/instances';
   }
   return path;
 });

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { User, LoginRequest, LoginResponse } from '@/types';
+import type { User, LoginRequest } from '@/types';
 import * as api from '@/api/tauri';
 
 export const useUserStore = defineStore('user', () => {

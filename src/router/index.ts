@@ -10,10 +10,11 @@ const Dashboard = () => import('@/views/Dashboard.vue');
 const MarketView = () => import('@/views/Market/MarketView.vue');
 const StrategyList = () => import('@/views/Strategy/StrategyList.vue');
 const StrategyEditor = () => import('@/views/Strategy/StrategyEditor.vue');
+const StrategyInstances = () => import('@/views/Strategy/StrategyInstances.vue');
 const BacktestView = () => import('@/views/Backtest/BacktestView.vue');
 const TradeConsole = () => import('@/views/Trade/TradeConsole.vue');
 const RiskMonitor = () => import('@/views/Risk/RiskMonitor.vue');
-const Settings = () => import('@/views/Settings/Settings.vue');
+const Settings = () => import('@/views/settings/Settings.vue');
 
 const routes: RouteRecordRaw[] = [
   {
@@ -47,6 +48,11 @@ const routes: RouteRecordRaw[] = [
         path: 'strategy/editor/:id?',
         name: 'StrategyEditor',
         component: StrategyEditor,
+      },
+      {
+        path: 'strategy/instances',
+        name: 'StrategyInstances',
+        component: StrategyInstances,
       },
       {
         path: 'backtest',

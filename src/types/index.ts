@@ -124,6 +124,26 @@ export interface StrategyInstance {
   createdAt: number;
 }
 
+// ============== StrategyEngine Types ==============
+export type InstanceStatus = 'Starting' | 'Running' | 'Stopping' | 'Stopped' | 'Error';
+
+export interface StrategyConfig {
+  id?: string;
+  name: string;
+  code: string;
+  parameters: Record<string, any>;
+  symbols: string[];
+  timeframes: string[];
+}
+
+export interface InstanceInfo {
+  id: string;
+  name: string;
+  status: InstanceStatus;
+  symbols: string[];
+  timeframes: string[];
+}
+
 // ============== 交易类型 ==============
 export enum OrderSide {
   BUY = 'buy',

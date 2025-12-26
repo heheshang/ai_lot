@@ -12,4 +12,7 @@ pub trait Repository<T, ID> {
 }
 
 pub mod user_repo;
+pub mod strategy_repo;
+
 pub use user_repo::UserRepository;
+pub use strategy_repo::StrategyRepository;
