@@ -27,7 +27,7 @@ export const useUserStore = defineStore('user', () => {
   async function login(request: LoginRequest) {
     loading.value = true;
     try {
-      const response = await api.invoke<LoginResponse>('login', request);
+      const response = await api.userApi.login(request);
       user.value = response.user;
       token.value = response.token;
       localStorage.setItem('token', response.token);
@@ -53,7 +53,7 @@ export const useUserStore = defineStore('user', () => {
       const userId = user.value?.id;
       if (!userId) return;
 
-      const currentUser = await api.invoke<User>('get_current_user', { userId });
+      const currentUser = await api.userApi.getCurrentUser(userId);
       user.value = currentUser;
     } catch (error) {
       console.error('Fetch user failed:', error);

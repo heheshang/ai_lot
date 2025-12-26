@@ -48,13 +48,13 @@ export const userApi = {
    * 用户登录
    */
   login: (request: LoginRequest) =>
-    invokeRaw<LoginResponse>('login', request),
+    invokeRaw<LoginResponse>('login', { request }),
 
   /**
    * 获取当前用户
    */
   getCurrentUser: (userId: string) =>
-    invokeRaw<User>('get_current_user', { userId }),
+    invokeRaw<User>('get_current_user', { user_id: userId }),
 
   /**
    * 用户登出

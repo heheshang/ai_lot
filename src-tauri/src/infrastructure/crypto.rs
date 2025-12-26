@@ -3,7 +3,6 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-
 /// 密码哈希服务
 pub struct CryptoService;
 
@@ -17,6 +16,7 @@ impl CryptoService {
         let password_hash = argon2
             .hash_password(password.as_bytes(), &salt)
             .map_err(|e| anyhow::anyhow!("Password hash failed: {}", e))?;
+        log::info!("password:{password},password_hash:{{password_hash:?}}",);
         Ok(password_hash.to_string())
     }
 
