@@ -1,0 +1,165 @@
+// AI-LOT Trading Platform - Theme Variables
+
+// ==================== Colors ====================
+
+// Primary Colors
+$primary-color: #409eff;
+$primary-light: #66b1ff;
+$primary-lighter: #a0cfff;
+$primary-dark: #337ecc;
+$primary-darker: #2a75c6;
+
+// Secondary Colors
+$success-color: #67c23a;
+$success-light: #85ce61;
+$success-lighter: #a4da89;
+$warning-color: #e6a23c;
+$warning-light: #ebb563;
+$danger-color: #f56c6c;
+$danger-light: #f78989;
+$info-color: #909399;
+
+// Trading Colors
+$up-color: #ef5350;
+$up-color-light: #e57373;
+$down-color: #26a69a;
+$down-color-light: #4db6ac;
+$neutral-color: #757575;
+
+// Status Colors
+$status-running: #67c23a;
+$status-stopped: #909399;
+$status-error: #f56c6c;
+$status-paused: #e6a23c;
+$status-pending: #409eff;
+
+// Background Colors
+$bg-primary: #ffffff;
+$bg-secondary: #f5f7fa;
+$bg-tertiary: #ebeef5;
+$bg-dark: #303133;
+$bg-darker: #1d1e1f;
+
+// Sidebar Colors
+$sidebar-bg: #1a1d2d;
+$sidebar-bg-dark: #141722;
+$sidebar-text: #bfcbd9;
+$sidebar-text-active: #ffffff;
+$sidebar-active-bg: #2c3e50;
+$sidebar-hover-bg: #263445;
+
+// Text Colors
+$text-primary: #303133;
+$text-secondary: #606266;
+$text-regular: #909399;
+$text-placeholder: #a8abb2;
+$text-light: #c0c4cc;
+
+// Border Colors
+$border-base: #dcdfe6;
+$border-light: #e4e7ed;
+$border-lighter: #ebeef5;
+$border-extra-light: #f2f6fc;
+$border-dark: #d4d7de;
+
+// ==================== Typography ====================
+
+$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+
+$font-size-extra-large: 24px;
+$font-size-large: 18px;
+$font-size-medium: 16px;
+$font-size-base: 14px;
+$font-size-small: 13px;
+$font-size-extra-small: 12px;
+
+$line-height-base: 1.5;
+$line-height-small: 1.2;
+
+// ==================== Spacing ====================
+
+$spacing-extra-small: 4px;
+$spacing-small: 8px;
+$spacing-medium: 12px;
+$spacing-large: 16px;
+$spacing-extra-large: 20px;
+$spacing-huge: 24px;
+$spacing-massive: 32px;
+
+// ==================== Border Radius ====================
+
+$radius-small: 2px;
+$radius-base: 4px;
+$radius-medium: 6px;
+$radius-large: 8px;
+$radius-extra-large: 12px;
+$radius-round: 999px;
+
+// ==================== Shadows ====================
+
+$shadow-small: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+$shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-large: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-extra-large: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+$shadow-card: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+$shadow-card-hover: 0 4px 20px 0 rgba(0, 0, 0, 0.15);
+
+$shadow-up: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+$shadow-up-large: 0 -10px 15px -3px rgba(0, 0, 0, 0.1);
+
+// ==================== Transitions ====================
+
+$transition-base: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+$transition-fast: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+$transition-slow: all 0.5s cubic-bezier(0.645, 0.045, 0.355, 1);
+
+$transition-duration: 0.3s;
+$transition-timing: cubic-bezier(0.645, 0.045, 0.355, 1);
+
+// ==================== Z-Index ====================
+
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+$z-index-notification: 1080;
+
+// ==================== Layout ====================
+
+$sidebar-width: 200px;
+$sidebar-collapsed-width: 64px;
+$header-height: 60px;
+$footer-height: 50px;
+
+// ==================== Card ====================
+
+$card-padding: $spacing-large;
+$card-background: $bg-primary;
+$card-border-radius: $radius-large;
+
+// ==================== Chart Colors ====================
+
+$chart-color-1: #5470c6;
+$chart-color-2: #91cc75;
+$chart-color-3: #fac858;
+$chart-color-4: #ee6666;
+$chart-color-5: #73c0de;
+$chart-color-6: #3ba272;
+$chart-color-7: #fc8452;
+$chart-color-8: #9a60b4;
+$chart-color-9: #ea7ccc;
+
+// Gradient Colors
+$gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$gradient-success: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+$gradient-warning: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%);
+$gradient-danger: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+$gradient-dark: linear-gradient(135deg, #434343 0%, #000000 100%);
+$gradient-ocean: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$gradient-sunset: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
