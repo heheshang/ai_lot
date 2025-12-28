@@ -3,6 +3,12 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
+use aes_gcm::{
+    aead::{Aead, AeadCore, KeyInit},
+    Aes256Gcm, Nonce,
+};
+use std::env;
+
 /// 密码哈希服务
 pub struct CryptoService;
 
@@ -39,6 +45,82 @@ impl CryptoService {
     pub fn generate_salt() -> String {
         SaltString::generate(&mut OsRng).to_string()
     }
+
+    /// 获取加密密钥
+    ///
+    /// 从环境变量或派生密钥获取加密密钥
+    fn get_encryption_key() -> Result<[u8; 32]> {
+        // 优先从环境变量获取
+        if let Ok(key_str) = env::var("AI_LOT_ENCRYPTION_KEY") {
+            // 从十六进制字符串解析密钥
+            if key_str.len() == 64 {
+                let mut key = [0u8; 32];
+                for i in 0..32 {
+                    key[i] = u8::from_str_radix(&key_str[i * 2..i * 2 + 2], 16)
+                        .map_err(|_| anyhow::anyhow!("Invalid encryption key format"))?;
+                }
+                return Ok(key);
+            }
+        }
+
+        // 备用方案：使用机器特定密钥
+        // 在生产环境中应该使用更安全的方式，如 HSM 或密钥管理服务
+        const MACHINE_KEY: &[u8] = b"AI_LOT_DEFAULT_ENCRYPTION_KEY_2025_32";
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&MACHINE_KEY[..32]);
+        Ok(key)
+    }
+
+    /// 加密 API 密钥
+    ///
+    /// 使用 AES-256-GCM 加密敏感数据
+    pub fn encrypt_api_key(data: &str) -> Result<String> {
+        let key = Self::get_encryption_key()?;
+        let cipher = Aes256Gcm::new(&key.into());
+        let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+
+        let ciphertext = cipher
+            .encrypt(&nonce, data.as_bytes())
+            .map_err(|e| anyhow::anyhow!("Encryption failed: {}", e))?;
+
+        // 组合 nonce 和 ciphertext，使用 hex 编码
+        Ok(format!(
+            "{}:{}",
+            hex::encode(nonce),
+            hex::encode(ciphertext)
+        ))
+    }
+
+    /// 解密 API 密钥
+    ///
+    /// 解密使用 encrypt_api_key 加密的数据
+    pub fn decrypt_api_key(encrypted: &str) -> Result<String> {
+        let key = Self::get_encryption_key()?;
+        let cipher = Aes256Gcm::new(&key.into());
+
+        let parts: Vec<&str> = encrypted.splitn(2, ':').collect();
+        if parts.len() != 2 {
+            return Err(anyhow::anyhow!("Invalid encrypted format"));
+        }
+
+        let nonce_bytes = hex::decode(parts[0])
+            .map_err(|_| anyhow::anyhow!("Invalid nonce format"))?;
+        let ciphertext = hex::decode(parts[1])
+            .map_err(|_| anyhow::anyhow!("Invalid ciphertext format"))?;
+
+        if nonce_bytes.len() != 12 {
+            return Err(anyhow::anyhow!("Invalid nonce length"));
+        }
+
+        let nonce = Nonce::from_slice(&nonce_bytes);
+
+        let plaintext = cipher
+            .decrypt(nonce, ciphertext.as_slice())
+            .map_err(|_| anyhow::anyhow!("Decryption failed"))?;
+
+        String::from_utf8(plaintext)
+            .map_err(|_| anyhow::anyhow!("Invalid UTF-8 in decrypted data"))
+    }
 }
 
 #[cfg(test)]
@@ -66,5 +148,46 @@ mod tests {
         let salt1 = CryptoService::generate_salt();
         let salt2 = CryptoService::generate_salt();
         assert_ne!(salt1, salt2);
+    }
+
+    #[test]
+    fn test_encrypt_decrypt_api_key() {
+        let api_key = "my_secret_api_key_12345";
+        let encrypted = CryptoService::encrypt_api_key(api_key).unwrap();
+
+        // 加密后的数据应该与原数据不同
+        assert_ne!(encrypted, api_key);
+        assert!(encrypted.contains(':'));
+        assert!(encrypted.len() > 20);
+
+        // 解密应该得到原数据
+        let decrypted = CryptoService::decrypt_api_key(&encrypted).unwrap();
+        assert_eq!(decrypted, api_key);
+    }
+
+    #[test]
+    fn test_decrypt_invalid_format() {
+        let result = CryptoService::decrypt_api_key("invalid_format");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decrypt_invalid_hex() {
+        let result = CryptoService::decrypt_api_key("invalid:hex");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_encrypt_twice_different_results() {
+        let api_key = "my_secret_api_key";
+        let encrypted1 = CryptoService::encrypt_api_key(api_key).unwrap();
+        let encrypted2 = CryptoService::encrypt_api_key(api_key).unwrap();
+
+        // 每次加密应该产生不同的结果（因为 nonce 随机）
+        assert_ne!(encrypted1, encrypted2);
+
+        // 但解密后应该相同
+        assert_eq!(CryptoService::decrypt_api_key(&encrypted1).unwrap(), api_key);
+        assert_eq!(CryptoService::decrypt_api_key(&encrypted2).unwrap(), api_key);
     }
 }

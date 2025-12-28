@@ -4,16 +4,22 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
-use tokio::sync::RwLock;
 
-use crate::repository::{UserRepository, StrategyRepository};
+use crate::repository::{UserRepository, StrategyRepository, StrategyInstanceRepository};
 use crate::infrastructure::audit::AuditLogger;
-use crate::core::{EventBus, StrategyEngine};
+use crate::core::EventBus;
+use crate::core::strategy::StrategyEngine;
+use crate::core::trade::exchange::binance::BinanceExchange;
+use crate::core::trade::exchange::Exchange;
+use crate::services::TradeService;
+use tokio::sync::RwLock;
 
 pub struct Database {
     pub pool: SqlitePool,
     event_bus: Arc<EventBus>,
-    strategy_engine: Arc<StrategyEngine>,
+    strategy_engine: Arc<crate::core::strategy::StrategyEngine>,
+    exchange: Arc<dyn Exchange>,
+    trade_service: Arc<RwLock<Option<Arc<TradeService>>>>,
 }
 
 impl Database {
@@ -46,14 +52,67 @@ impl Database {
         let event_bus = Arc::new(EventBus::new());
         log::info!("EventBus initialized");
 
+        // 创建 Exchange（使用 Binance，暂不配置 API 密钥）
+        let exchange: Arc<dyn Exchange> = Arc::new(BinanceExchange::new(None, None));
+        log::info!("Exchange initialized (Binance)");
+
+        // 创建 StrategyInstanceRepository
+        let instance_repo = Arc::new(StrategyInstanceRepository::new(pool.clone()));
+        log::info!("StrategyInstanceRepository initialized");
+
         // 创建 StrategyEngine
-        let strategy_engine = Arc::new(StrategyEngine::new(event_bus.clone()));
+        let strategy_engine = Arc::new(StrategyEngine::new(
+            event_bus.clone(),
+            exchange.clone(),
+            instance_repo,
+        ));
         log::info!("StrategyEngine initialized");
+
+        // TradeService will be initialized lazily when needed
+        let trade_service = Arc::new(RwLock::new(None));
 
         Ok(Self {
             pool,
             event_bus,
             strategy_engine,
+            exchange,
+            trade_service,
+        })
+    }
+
+    /// 使用现有连接池创建 Database 实例
+    pub async fn new_with_pool(pool: SqlitePool) -> Result<Self> {
+        log::info!("Creating Database with existing pool");
+
+        // 创建 EventBus
+        let event_bus = Arc::new(EventBus::new());
+        log::info!("EventBus initialized");
+
+        // 创建 Exchange（使用 Binance，暂不配置 API 密钥）
+        let exchange: Arc<dyn Exchange> = Arc::new(BinanceExchange::new(None, None));
+        log::info!("Exchange initialized (Binance)");
+
+        // 创建 StrategyInstanceRepository
+        let instance_repo = Arc::new(StrategyInstanceRepository::new(pool.clone()));
+        log::info!("StrategyInstanceRepository initialized");
+
+        // 创建 StrategyEngine
+        let strategy_engine = Arc::new(StrategyEngine::new(
+            event_bus.clone(),
+            exchange.clone(),
+            instance_repo,
+        ));
+        log::info!("StrategyEngine initialized");
+
+        // TradeService will be initialized lazily when needed
+        let trade_service = Arc::new(RwLock::new(None));
+
+        Ok(Self {
+            pool,
+            event_bus,
+            strategy_engine,
+            exchange,
+            trade_service,
         })
     }
 
@@ -80,6 +139,11 @@ impl Database {
         StrategyRepository::new(self.pool.clone())
     }
 
+    /// 获取 StrategyInstance Repository
+    pub fn strategy_instance_repo(&self) -> StrategyInstanceRepository {
+        StrategyInstanceRepository::new(self.pool.clone())
+    }
+
     /// 获取审计日志记录器
     pub fn audit_logger(&self) -> AuditLogger {
         AuditLogger::new(self.pool.clone())
@@ -91,8 +155,44 @@ impl Database {
     }
 
     /// 获取 StrategyEngine
-    pub fn get_strategy_engine(&self) -> Arc<StrategyEngine> {
+    pub fn get_strategy_engine(&self) -> Arc<crate::core::strategy::StrategyEngine> {
         self.strategy_engine.clone()
+    }
+
+    /// 获取 Exchange
+    pub fn get_exchange(&self) -> Arc<dyn Exchange> {
+        self.exchange.clone()
+    }
+
+    /// 获取或初始化 TradeService (async)
+    pub async fn get_trade_service(&self) -> Arc<TradeService> {
+        let mut service_guard = self.trade_service.write().await;
+        if let Some(service) = &*service_guard {
+            service.clone()
+        } else {
+            let db = crate::infrastructure::Database {
+                pool: self.pool.clone(),
+                event_bus: self.event_bus.clone(),
+                strategy_engine: self.strategy_engine.clone(),
+                exchange: self.exchange.clone(),
+                trade_service: Arc::new(RwLock::new(None)),
+            };
+            let service = Arc::new(TradeService::new(self.exchange.clone(), db));
+            *service_guard = Some(service.clone());
+            service
+        }
+    }
+
+    /// Create a Database instance suitable for TradeService
+    /// This creates a new Database wrapper with the same pool but cloned references
+    pub fn as_trade_db(&self) -> crate::infrastructure::Database {
+        crate::infrastructure::Database {
+            pool: self.pool.clone(),
+            event_bus: self.event_bus.clone(),
+            strategy_engine: self.strategy_engine.clone(),
+            exchange: self.exchange.clone(),
+            trade_service: Arc::new(RwLock::new(None)),
+        }
     }
 }
 

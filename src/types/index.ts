@@ -125,7 +125,7 @@ export interface StrategyInstance {
 }
 
 // ============== StrategyEngine Types ==============
-export type InstanceStatus = 'Starting' | 'Running' | 'Stopping' | 'Stopped' | 'Error';
+export type InstanceStatus = 'Starting' | 'Running' | 'Paused' | 'Stopping' | 'Stopped' | 'Error';
 
 export interface StrategyConfig {
   id?: string;
@@ -260,6 +260,17 @@ export interface RiskAlert {
   createdAt: number;
 }
 
+// Risk Dashboard Types
+export interface RiskOverview {
+  balance: number;
+  todayPnl: number;
+  totalPositionValue: number;
+  currentDrawdownPct: number;
+  peakEquity: number;
+  activeAlertCount: number;
+  ruleStatus: Record<string, 'ok' | 'warning' | 'critical'>;
+}
+
 // ============== API 响应类型 ==============
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -273,3 +284,9 @@ export interface TauriCommand {
   cmd: string;
   payload?: any;
 }
+
+// ============== 导出风控类型 ==============
+export * from './risk';
+
+// ============== 导出配置类型 ==============
+export * from './config';

@@ -55,7 +55,7 @@ impl ScriptExecutor {
 
         ctx.with(|ctx| {
             // 执行用户代码
-            let _ = ctx.eval::<(), _>(code.as_bytes())?;
+            ctx.eval::<(), _>(code.as_bytes())?;
 
             // 尝试调用 onInit
             let exec_code = format!(
@@ -99,7 +99,7 @@ impl ScriptExecutor {
                 params_json.replace('"', "'"),
                 storage_data
             );
-            let _ = ctx.eval::<(), _>(exec_code.as_bytes())?;
+            ctx.eval::<(), _>(exec_code.as_bytes())?;
 
             Ok::<(), rquickjs::Error>(())
         })?;
@@ -235,7 +235,7 @@ impl ScriptExecutor {
 
         ctx.with(|ctx| {
             // 执行用户代码
-            let _ = ctx.eval::<(), _>(code.as_bytes())?;
+            ctx.eval::<(), _>(code.as_bytes())?;
 
             // 尝试调用 onStop
             let stop_code = format!(
@@ -261,7 +261,7 @@ impl ScriptExecutor {
                 "#,
                 storage_data
             );
-            let _ = ctx.eval::<(), _>(stop_code.as_bytes())?;
+            ctx.eval::<(), _>(stop_code.as_bytes())?;
 
             Ok::<(), rquickjs::Error>(())
         })?;

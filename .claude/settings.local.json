@@ -22,7 +22,31 @@
       "Bash(dir:*)",
       "Bash(npm run build)",
       "Bash(bun add:*)",
-      "Bash(bun run dev)"
+      "Bash(bun run dev)",
+      "Bash(cargo build:*)",
+      "Bash(tee:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(xargs:*)",
+      "Bash(tr:*)",
+      "Bash(fold -w 60)",
+      "Bash(awk:*)",
+      "Bash(find:*)",
+      "Bash(cargo clean:*)",
+      "Bash(1)",
+      "Bash(git checkout:*)",
+      "Bash(test:*)",
+      "Bash(grep:*)",
+      "Bash(npm run)",
+      "Bash(npm run lint:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(ls:*)",
+      "mcp__morphllm-fast-apply__edit_file"
     ]
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true
   }
 }

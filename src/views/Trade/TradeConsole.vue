@@ -1,6 +1,6 @@
 <template>
   <div class="trade-console">
-    <!-- 页面头部 -->
+    <!-- Page Header -->
     <div class="page-header">
       <div class="header-left">
         <h2 class="page-title">交易控制台</h2>
@@ -10,291 +10,152 @@
         </el-breadcrumb>
       </div>
       <div class="header-actions">
-        <el-button type="danger" @click="closeAllPositions" :disabled="positions.length === 0">
+        <el-tag :type="balanceLoading ? 'info' : 'success'" size="large">
+          账户余额: {{ balanceLoading ? '加载中...' : `$${accountBalance.toFixed(2)}` }}
+        </el-tag>
+        <el-tag type="info" size="large">
+          未实现盈亏:
+          <span :class="totalUnrealizedPnl >= 0 ? 'pnl-profit' : 'pnl-loss'">
+            {{ totalUnrealizedPnl >= 0 ? '+$' : '-$' }}{{ Math.abs(totalUnrealizedPnl).toFixed(2) }}
+          </span>
+        </el-tag>
+        <el-button
+          type="danger"
+          @click="closeAllPositions"
+          :disabled="tradeStore.positions.length === 0"
+          :loading="tradeStore.loading"
+        >
           <el-icon><Close /></el-icon>
           全部平仓
         </el-button>
       </div>
     </div>
 
-    <!-- 账户信息 -->
-    <el-row :gutter="16" class="account-row">
-      <el-col :span="6">
-        <div class="balance-card">
-          <div class="balance-icon balance-icon-btc">
-            <el-icon :size="20"><Wallet /></el-icon>
-          </div>
-          <div class="balance-info">
-            <div class="balance-label">BTC 可用</div>
-            <div class="balance-value">1.2345</div>
-          </div>
+    <!-- Running Strategies Panel -->
+    <el-card class="strategies-panel-card" shadow="never" v-if="runningInstances.length > 0">
+      <template #header>
+        <div class="card-header">
+          <span>运行策略</span>
+          <el-badge :value="runningInstances.length" :max="99" />
         </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="balance-card">
-          <div class="balance-icon balance-icon-eth">
-            <el-icon :size="20"><Wallet /></el-icon>
-          </div>
-          <div class="balance-info">
-            <div class="balance-label">ETH 可用</div>
-            <div class="balance-value">12.5678</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="balance-card">
-          <div class="balance-icon balance-icon-usdt">
-            <el-icon :size="20"><Wallet /></el-icon>
-          </div>
-          <div class="balance-info">
-            <div class="balance-label">USDT 可用</div>
-            <div class="balance-value">12,456.78</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="balance-card balance-total">
-          <div class="balance-icon">
-            <el-icon :size="20"><TrendCharts /></el-icon>
-          </div>
-          <div class="balance-info">
-            <div class="balance-label">总资产估值</div>
-            <div class="balance-value">45,678.90</div>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="16" class="main-row">
-      <!-- 左侧：深度图 + 交易面板 -->
-      <el-col :span="16">
-        <!-- 交易对选择 -->
-        <el-card class="symbol-card" shadow="never">
-          <div class="symbol-selector">
-            <div class="current-symbol">
-              <el-avatar :size="32" src="https://cryptologos.cc/logos/btc.png" />
-              <div class="symbol-info">
-                <div class="symbol-name">BTC/USDT</div>
-                <div class="symbol-price">
-                  <span class="price-value price-up">43,256.78</span>
-                  <span class="price-change price-up">+2.34%</span>
-                </div>
-              </div>
-              <el-icon class="expand-icon"><ArrowDown /></el-icon>
-            </div>
-            <div class="quick-symbols">
-              <div class="symbol-item" v-for="s in hotSymbols" :key="s.symbol">
-                <span class="symbol-pair">{{ s.symbol }}</span>
-                <span class="symbol-price" :class="s.change >= 0 ? 'price-up' : 'price-down'">
-                  {{ s.change >= 0 ? '+' : '' }}{{ s.change }}%
-                </span>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 深度图 -->
-        <el-card class="depth-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span>订单簿深度</span>
-              <el-radio-group v-model="depthType" size="small">
-                <el-radio-button label="limit">限价</el-radio-button>
-                <el-radio-button label="market">市价</el-radio-button>
-              </el-radio-group>
-            </div>
+      </template>
+      <el-table
+        :data="runningInstances"
+        stripe
+        :empty-text="strategyLoading ? '加载中...' : '暂无运行策略'"
+        max-height="200"
+      >
+        <el-table-column prop="name" label="策略名称" width="150" />
+        <el-table-column prop="symbols" label="交易对" width="100">
+          <template #default="{ row }">
+            {{ row.symbols?.[0] || '-' }}
           </template>
-          <div ref="depthChartRef" class="depth-chart"></div>
-        </el-card>
-
-        <!-- 交易面板 -->
-        <el-card class="trade-panel" shadow="never">
-          <template #header>
-            <span>快速交易</span>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getInstanceStatusType(row.status)" size="small">
+              {{ getInstanceStatusLabel(row.status) }}
+            </el-tag>
           </template>
-          <div class="trade-tabs">
-            <el-radio-group v-model="tradeSide" size="large">
-              <el-radio-button value="buy" class="buy-tab">
-                <span class="tab-text">买入</span>
-                <span class="tab-price price-up">43,256.78</span>
-              </el-radio-button>
-              <el-radio-button value="sell" class="sell-tab">
-                <span class="tab-text">卖出</span>
-                <span class="tab-price price-down">43,254.32</span>
-              </el-radio-button>
-            </el-radio-group>
-          </div>
+        </el-table-column>
+        <el-table-column prop="timeframes" label="周期" width="80">
+          <template #default="{ row }">
+            {{ row.timeframes?.[0] || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" align="center">
+          <template #default="{ row }">
+            <el-button
+              v-if="canStopInstance(row.status)"
+              type="danger"
+              size="small"
+              link
+              @click="handleStopInstance(row.id)"
+            >
+              停止
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
-          <div class="trade-form">
-            <el-form :model="tradeForm" label-width="0" class="trade-form-content">
-              <el-row :gutter="16">
-                <el-col :span="12">
-                  <el-form-item label="订单类型">
-                    <el-radio-group v-model="tradeForm.orderType" size="small">
-                      <el-radio-button label="limit">限价</el-radio-button>
-                      <el-radio-button label="market">市价</el-radio-button>
-                      <el-radio-button label="stop">止损</el-radio-button>
-                    </el-radio-group>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="12">
-                  <el-form-item label="价格类型">
-                    <el-radio-group v-model="tradeForm.priceType" size="small">
-                      <el-radio-button label="limit">限价</el-radio-button>
-                      <el-radio-button label="market">市价</el-radio-button>
-                    </el-radio-group>
-                  </el-form-item>
-                </el-col>
-              </el-row>
-
-              <!-- 价格输入 -->
-              <div v-if="tradeForm.orderType !== 'market'" class="price-input-row">
-                <div class="price-label">
-                  <span>价格</span>
-                  <span class="price-label-desc">({{ tradeForm.priceType === 'limit' ? '限价' : '市价' }})</span>
-                </div>
-                <div class="price-input-wrapper">
-                  <el-input-number
-                    v-model="tradeForm.price"
-                    :precision="2"
-                    :step="0.01"
-                    :controls-position="right"
-                    class="price-input"
-                    @change="updateTotalAmount"
-                  >
-                    <template #append>
-                      <span>USDT</span>
-                    </template>
-                  </el-input-number>
-                </div>
-                <div class="price-presets">
-                  <el-button size="small" @click="setPricePercent(-0.1)">-0.1%</el-button>
-                  <el-button size="small" @click="setPricePercent(-1)">-1%</el-button>
-                  <el-button size="small" @click="setPricePercent(0)">市价</el-button>
-                  <el-button size="small" @click="setPricePercent(1)">+1%</el-button>
-                  <el-button size="small" @click="setPricePercent(0.1)">+0.1%</el-button>
-                </div>
-              </div>
-
-              <!-- 数量输入 -->
-              <div class="amount-input-row">
-                <div class="amount-label">
-                  <span>数量</span>
-                  <span class="amount-label-desc">(BTC)</span>
-                </div>
-                <div class="amount-input-wrapper">
-                  <el-input-number
-                    v-model="tradeForm.amount"
-                    :precision="6"
-                    :step="0.000001"
-                    :controls-position="right"
-                    class="amount-input"
-                    @change="updateTotalAmount"
-                  >
-                    <template #append>
-                      <span>BTC</span>
-                    </template>
-                  </el-input-number>
-                </div>
-                <div class="amount-presets">
-                  <el-button size="small" @click="setAmountPercent(25)">25%</el-button>
-                  <el-button size="small" @click="setAmountPercent(50)">50%</el-button>
-                  <el-button size="small" @click="setAmountPercent(75)">75%</el-button>
-                  <el-button size="small" @click="setAmountPercent(100)">100%</el-button>
-                </div>
-              </div>
-
-              <!-- 交易预览 -->
-              <div class="trade-preview">
-                <div class="preview-item">
-                  <span class="preview-label">交易额</span>
-                  <span class="preview-value">{{ formatCurrency(tradeForm.total) }} USDT</span>
-                </div>
-                <div class="preview-item">
-                  <span class="preview-label">手续费</span>
-                  <span class="preview-value">{{ tradeForm.fee }} USDT</span>
-                </div>
-              </div>
-
-              <!-- 提交按钮 -->
-              <el-button
-                type="primary"
-                size="large"
-                :class="tradeSide === 'buy' ? 'buy-button' : 'sell-button'"
-                :loading="trading"
-                @click="submitTrade"
-                class="submit-button"
-              >
-                {{ tradeSide === 'buy' ? '买入 BTC' : '卖出 BTC' }}
-              </el-button>
-            </el-form>
-          </div>
+    <el-row :gutter="16" class="main-row" v-if="userStore.user">
+      <!-- Left Column: Order Form -->
+      <el-col :span="12">
+        <el-card class="order-form-card" shadow="never">
+          <OrderForm
+            :user-id="userStore.user.id"
+            default-symbol="BTCUSDT"
+            @order-placed="handleOrderPlaced"
+          />
         </el-card>
       </el-col>
 
-      <!-- 右侧：持仓 + 订单 -->
-      <el-col :span="8">
-        <!-- 当前持仓 -->
+      <!-- Right Column: Positions + Orders -->
+      <el-col :span="12">
+        <!-- Position List -->
         <el-card class="positions-card" shadow="never">
           <template #header>
             <div class="card-header">
               <span>当前持仓</span>
-              <el-badge :value="positions.length" :max="99" />
+              <el-badge :value="tradeStore.positions.length" :max="99" />
             </div>
           </template>
           <div class="positions-list">
-            <div v-if="positions.length === 0" class="empty-state">
+            <div v-if="tradeStore.positions.length === 0" class="empty-state">
               <el-empty description="暂无持仓" :image-size="60" />
             </div>
-            <div v-for="pos in positions" :key="pos.id" class="position-item">
+            <div v-for="pos in tradeStore.positions" :key="pos.id" class="position-item">
               <div class="position-header">
                 <div class="position-symbol">{{ pos.symbol }}</div>
                 <el-tag :type="pos.side === 'long' ? 'success' : 'danger'" size="small">
-                  {{ pos.side === 'long' ? '做多' : '做空' }}
+                  {{ pos.side === 'long' ? '多头' : '空头' }}
                 </el-tag>
               </div>
               <div class="position-info">
                 <div class="position-row">
                   <span class="row-label">数量</span>
-                  <span class="row-value">{{ pos.amount }}</span>
+                  <span class="row-value">{{ pos.quantity.toFixed(6) }}</span>
                 </div>
                 <div class="position-row">
-                  <span class="row-label">均价</span>
-                  <span class="row-value">{{ pos.avgPrice }}</span>
+                  <span class="row-label">开仓价</span>
+                  <span class="row-value">{{ formatPrice(pos.entryPrice) }}</span>
                 </div>
                 <div class="position-row">
                   <span class="row-label">当前价</span>
-                  <span class="row-value" :class="pos.pnl >= 0 ? 'price-up' : 'price-down'">
-                    {{ pos.currentPrice }}
+                  <span class="row-value" :class="pos.unrealizedPnl >= 0 ? 'price-up' : 'price-down'">
+                    {{ pos.currentPrice ? formatPrice(pos.currentPrice) : '-' }}
                   </span>
                 </div>
                 <div class="position-row">
                   <span class="row-label">未实现盈亏</span>
-                  <span class="row-value" :class="pos.pnl >= 0 ? 'profit' : 'loss'">
-                    {{ pos.pnl >= 0 ? '+' : '' }}{{ pos.pnl }}
+                  <span class="row-value" :class="pos.unrealizedPnl >= 0 ? 'profit' : 'loss'">
+                    {{ pos.unrealizedPnl >= 0 ? '+' : '' }}{{ formatCurrency(pos.unrealizedPnl) }}
                   </span>
                 </div>
               </div>
               <div class="position-actions">
-                <el-button size="small" @click="closePosition(pos.id)">平仓</el-button>
+                <el-button size="small" @click="closePosition(pos)" :loading="tradeStore.loading">
+                  平仓
+                </el-button>
               </div>
             </div>
           </div>
         </el-card>
 
-        <!-- 当前委托 -->
+        <!-- Order List -->
         <el-card class="orders-card" shadow="never">
           <template #header>
             <div class="card-header">
-              <span>当前委托</span>
-              <el-badge :value="orders.length" :max="99" />
+              <span>活跃订单</span>
+              <el-badge :value="tradeStore.activeOrders.length" :max="99" />
             </div>
           </template>
           <div class="orders-list">
-            <div v-if="orders.length === 0" class="empty-state">
-              <el-empty description="暂无委托" :image-size="60" />
+            <div v-if="tradeStore.activeOrders.length === 0" class="empty-state">
+              <el-empty description="暂无活跃订单" :image-size="60" />
             </div>
-            <div v-for="order in orders" :key="order.id" class="order-item">
+            <div v-for="order in tradeStore.activeOrders" :key="order.id" class="order-item">
               <div class="order-header">
                 <span class="order-symbol">{{ order.symbol }}</span>
                 <el-tag :type="order.side === 'buy' ? 'success' : 'danger'" size="small">
@@ -304,23 +165,37 @@
               <div class="order-details">
                 <div class="order-row">
                   <span class="row-label">类型</span>
-                  <span class="row-value">{{ order.type }}</span>
+                  <span class="row-value">{{ order.type === 'market' ? '市价' : '限价' }}</span>
                 </div>
                 <div class="order-row">
                   <span class="row-label">价格</span>
-                  <span class="row-value">{{ order.price }}</span>
+                  <span class="row-value">
+                    {{ order.price ? formatPrice(order.price) : '市价' }}
+                  </span>
                 </div>
                 <div class="order-row">
                   <span class="row-label">数量</span>
-                  <span class="row-value">{{ order.amount }}</span>
+                  <span class="row-value">{{ order.quantity.toFixed(6) }}</span>
                 </div>
                 <div class="order-row">
                   <span class="row-label">已成交</span>
-                  <span class="row-value">{{ order.filled }}</span>
+                  <span class="row-value">{{ order.filledQuantity.toFixed(6) }}</span>
+                </div>
+                <div class="order-row">
+                  <span class="row-label">状态</span>
+                  <span class="row-value">{{ getOrderStatusLabel(order.status) }}</span>
                 </div>
               </div>
               <div class="order-actions">
-                <el-button size="small" type="danger" link @click="cancelOrder(order.id)">撤单</el-button>
+                <el-button
+                  size="small"
+                  type="danger"
+                  link
+                  @click="cancelOrder(order.id)"
+                  :loading="tradeStore.loading"
+                >
+                  撤单
+                </el-button>
               </div>
             </div>
           </div>
@@ -331,166 +206,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
-import * as echarts from 'echarts';
-import {
-  Close,
-  Wallet,
-  TrendCharts,
-  ArrowDown,
-  ShoppingCart,
-} from '@element-plus/icons-vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { Close } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useUserStore } from '@/store/modules/user';
+import { useTradeStore } from '@/store/modules/trade';
+import { useMarketStore } from '@/store/modules/market';
+import * as api from '@/api/tauri';
+import OrderForm from '@/components/Trade/OrderForm.vue';
+import type { InstanceStatus, OrderStatus } from '@/types';
 
-// 状态
-const depthType = ref('limit');
-const tradeSide = ref('buy');
-const trading = ref(false);
-const depthChartRef = ref<HTMLElement>();
-let depthChart: echarts.ECharts | null = null;
+// Router
+const router = useRouter();
 
-// 交易表单
-const tradeForm = ref({
-  orderType: 'limit',
-  priceType: 'limit',
-  price: 43256.78,
-  amount: 0.1,
-  total: 4325.68,
-  fee: 4.33,
+// Stores
+const userStore = useUserStore();
+const tradeStore = useTradeStore();
+const marketStore = useMarketStore();
+
+// State
+const accountBalance = ref(0);
+const balanceLoading = ref(false);
+const runningInstances = ref<any[]>([]);
+const strategyLoading = ref(false);
+
+// Interval refs
+const refreshInterval = ref<number | null>(null);
+
+// Computed
+const totalUnrealizedPnl = computed(() => {
+  return tradeStore.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
 });
 
-// 热门交易对
-const hotSymbols = ref([
-  { symbol: 'ETH/USDT', change: 1.23 },
-  { symbol: 'BNB/USDT', change: -0.56 },
-  { symbol: 'SOL/USDT', change: 3.45 },
-  { symbol: 'ADA/USDT', change: -1.23 },
-  { symbol: 'DOT/USDT', change: 0.89 },
-]);
-
-// 模拟持仓数据
-const positions = ref([
-  {
-    id: 1,
-    symbol: 'BTC/USDT',
-    side: 'long',
-    amount: '0.5',
-    avgPrice: 42000,
-    currentPrice: 43256,
-    pnl: 628,
-  },
-  {
-    id: 2,
-    symbol: 'ETH/USDT',
-    side: 'short',
-    amount: '5',
-    avgPrice: 2600,
-    currentPrice: 2550,
-    pnl: 250,
-  },
-]);
-
-// 模拟委托数据
-const orders = ref([
-  {
-    id: 1,
-    symbol: 'BTC/USDT',
-    side: 'buy',
-    type: 'limit',
-    price: 43000,
-    amount: 0.5,
-    filled: 0,
-  },
-  {
-    id: 2,
-    symbol: 'ETH/USDT',
-    side: 'sell',
-    type: 'limit',
-    price: 2600,
-    amount: 2,
-    filled: 0,
-  },
-]);
-
-// 初始化深度图
-function initDepthChart() {
-  if (!depthChartRef.value) return;
-
-  depthChart = echarts.init(depthChartRef.value);
-
-  // 模拟深度数据
-  const bids = Array.from({ length: 20 }, (_, i) => ({
-    price: 43200 - i * 10,
-    amount: Math.random() * 100 + 10,
-  }));
-
-  const asks = Array.from({ length: 20 }, (_, i) => ({
-    price: 43300 + i * 10,
-    amount: Math.random() * 100 + 10,
-  }));
-
-  const option = {
-    grid: { left: 10, right: 10 },
-    xAxis: {
-      type: 'category',
-      data: [...bids.reverse().map(d => d.price), ...asks.map(d => d.price)],
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { show: false },
-      axisLabel: { show: false },
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { show: false },
-      axisLabel: { show: false },
-    },
-    series: [
-      {
-        type: 'bar',
-        name: '买单',
-        data: [...bids.reverse().map(d => d.amount), ...asks.map(() => 0)],
-        itemStyle: {
-          color: '#26a69a',
-        },
-        stack: 'total',
-      },
-      {
-        type: 'bar',
-        name: '卖单',
-        data: [...bids.reverse().map(() => 0), ...asks.map(d => d.amount)],
-        itemStyle: {
-          color: '#ef5350',
-        },
-        stack: 'total',
-      },
-    ],
-  };
-
-  depthChart.setOption(option);
-
-  window.addEventListener('resize', handleDepthResize);
-}
-
-function handleDepthResize() {
-  depthChart?.resize();
-}
-
-function updateTotalAmount() {
-  tradeForm.value.total = tradeForm.value.price * tradeForm.value.amount;
-  tradeForm.value.fee = tradeForm.value.total * 0.001;
-}
-
-function setPricePercent(percent: number) {
-  const currentPrice = 43256.78;
-  tradeForm.value.price = currentPrice * (1 + percent / 100);
-  updateTotalAmount();
-}
-
-function setAmountPercent(percent: number) {
-  tradeForm.value.amount = 1 * (percent / 100);
-  updateTotalAmount();
+// Methods
+function formatPrice(price: number): string {
+  if (price >= 1000) return price.toFixed(2);
+  if (price >= 1) return price.toFixed(4);
+  return price.toFixed(6);
 }
 
 function formatCurrency(value: number): string {
@@ -500,57 +253,196 @@ function formatCurrency(value: number): string {
   });
 }
 
-async function submitTrade() {
-  trading.value = true;
-  // 模拟交易
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  trading.value = false;
-  ElMessage.success(tradeSide.value === 'buy' ? '买入成功' : '卖出成功');
+function getOrderStatusLabel(status: OrderStatus): string {
+  switch (status) {
+    case 'pending': return '待提交';
+    case 'open': return '挂单';
+    case 'partially_filled': return '部分成交';
+    case 'filled': return '已成交';
+    case 'canceled': return '已撤销';
+    case 'rejected': return '已拒绝';
+    default: return status;
+  }
 }
 
-async function closePosition(id: number) {
+function getInstanceStatusLabel(status: InstanceStatus): string {
+  switch (status) {
+    case 'Starting': return '启动中';
+    case 'Running': return '运行中';
+    case 'Stopping': return '停止中';
+    case 'Stopped': return '已停止';
+    case 'Error': return '错误';
+    default: return status;
+  }
+}
+
+function getInstanceStatusType(status: InstanceStatus): string {
+  switch (status) {
+    case 'Running': return 'success';
+    case 'Starting':
+    case 'Stopping': return 'warning';
+    case 'Stopped': return 'info';
+    case 'Error': return 'danger';
+    default: return '';
+  }
+}
+
+function canStopInstance(status: InstanceStatus): boolean {
+  return status === 'Running' || status === 'Starting' || status === 'Error';
+}
+
+async function loadAccountBalance() {
+  balanceLoading.value = true;
+  try {
+    const balances = await tradeStore.getBalance();
+    // Find USDT balance or calculate total balance
+    const usdtBalance = balances.find((b: any) => b.asset === 'USDT');
+    accountBalance.value = usdtBalance ? parseFloat(usdtBalance.free || '0') : 0;
+  } catch (error) {
+    console.error('Failed to load balance:', error);
+    accountBalance.value = 0;
+  } finally {
+    balanceLoading.value = false;
+  }
+}
+
+async function loadRunningInstances() {
+  strategyLoading.value = true;
+  try {
+    runningInstances.value = await api.invoke('strategy_instance_list_all');
+  } catch (error) {
+    console.error('Failed to load running instances:', error);
+    runningInstances.value = [];
+  } finally {
+    strategyLoading.value = false;
+  }
+}
+
+async function handleStopInstance(instanceId: string) {
+  try {
+    await ElMessageBox.confirm(
+      '确定要停止此策略吗？',
+      '停止策略',
+      { type: 'warning' }
+    );
+
+    await api.invoke('strategy_stop_instance', { instanceId });
+    ElMessage.success('策略已停止');
+
+    // Reload instances
+    await loadRunningInstances();
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('停止策略失败：' + (error as Error).message);
+    }
+  }
+}
+
+function handleOrderPlaced(order: any) {
+  ElMessage.success(`订单已提交: ${order.id}`);
+}
+
+async function closePosition(pos: any) {
+  if (!userStore.user) return;
+
   try {
     await ElMessageBox.confirm('确定要平仓吗？', '确认平仓', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
     });
+
+    await tradeStore.closePosition(userStore.user.id, pos.symbol, pos.side, pos.quantity);
     ElMessage.success('平仓成功');
-  } catch {}
+  } catch {
+    // User canceled
+  }
 }
 
 async function closeAllPositions() {
+  if (!userStore.user) return;
+
   try {
     await ElMessageBox.confirm('确定要全部平仓吗？', '确认', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
     });
+
+    for (const pos of tradeStore.positions) {
+      await tradeStore.closePosition(userStore.user.id, pos.symbol, pos.side, pos.quantity);
+    }
+
     ElMessage.success('全部平仓成功');
-  } catch {}
+  } catch {
+    // User canceled
+  }
 }
 
-async function cancelOrder(id: number) {
-  ElMessage.success('撤单成功');
+async function cancelOrder(orderId: string) {
+  if (!userStore.user) return;
+
+  try {
+    await tradeStore.cancelOrder(userStore.user.id, orderId);
+    ElMessage.success('撤单成功');
+  } catch (error) {
+    ElMessage.error('撤单失败：' + (error as Error).message);
+  }
 }
 
-onMounted(() => {
-  nextTick(() => {
-    initDepthChart();
-  });
+async function refreshData() {
+  if (!userStore.user) return;
+
+  // Refresh account balance
+  await loadAccountBalance();
+
+  // Refresh positions and orders
+  await tradeStore.initialize(userStore.user.id);
+
+  // Refresh running instances
+  await loadRunningInstances();
+}
+
+// Lifecycle
+onMounted(async () => {
+  // Check if user is logged in
+  if (!userStore.user) {
+    ElMessage.warning('请先登录');
+    router.push('/login');
+    return;
+  }
+
+  // Load symbols
+  if (marketStore.symbols.length === 0) {
+    await marketStore.loadSymbols();
+  }
+
+  // Initialize trade store
+  await tradeStore.initialize(userStore.user.id);
+
+  // Load initial data
+  await loadAccountBalance();
+  await loadRunningInstances();
+
+  // Set up auto-refresh (every 5 seconds)
+  refreshInterval.value = window.setInterval(() => {
+    refreshData();
+  }, 5000);
 });
 
 onUnmounted(() => {
-  depthChart?.dispose();
-  window.removeEventListener('resize', handleDepthResize);
+  // Clear interval
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value);
+  }
 });
 </script>
 
 <style scoped lang="scss">
 .trade-console {
-  padding: 0;
+  padding: 20px;
   min-height: calc(100vh - 60px);
-  background: #f5f7fa;
+  background: var(--el-bg-color-page);
 }
 
 .page-header {
@@ -569,13 +461,29 @@ onUnmounted(() => {
 .page-title {
   font-size: 20px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
   margin: 0;
 }
 
 .header-actions {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.pnl-profit {
+  color: #67c23a;
+  font-weight: 600;
+}
+
+.pnl-loss {
+  color: #f56c6c;
+  font-weight: 600;
+}
+
+// Strategy panel
+.strategies-panel-card {
+  margin-bottom: 16px;
 }
 
 // 账户余额卡片
@@ -708,9 +616,8 @@ onUnmounted(() => {
   .price-change {
     font-size: 12px;
   }
-}
 
-.expand-icon {
+  .expand-icon {
     color: #909399;
   }
 

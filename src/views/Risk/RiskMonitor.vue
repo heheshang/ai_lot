@@ -510,7 +510,7 @@ function saveSettings() {
 }
 
 // 渲染仪表盘图表
-function renderGaugeChart(container: HTMLElement, value: number, color: string): echarts.ECharts {
+function renderGaugeChart(container: HTMLElement, value: number, _color: string): echarts.ECharts {
   const chart = echarts.init(container);
   const option: EChartsOption = {
     series: [

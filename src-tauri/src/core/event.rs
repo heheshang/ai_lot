@@ -27,6 +27,54 @@ pub enum StrategyEvent {
     Error(String),
 }
 
+/// 风险事件
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RiskEvent {
+    AlertTriggered(RiskAlertData),
+    AlertHandled(String, String), // alert_id, handled_by
+    AlertIgnored(String), // alert_id
+    RiskThresholdExceeded(RiskThresholdData),
+    RiskNormalized(RiskNormalizedData),
+}
+
+/// 风险告警数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskAlertData {
+    pub id: String,
+    pub rule_id: String,
+    pub user_id: String,
+    pub severity: String,
+    pub title: String,
+    pub message: String,
+    pub strategy_instance_id: Option<String>,
+    pub symbol: Option<String>,
+    pub current_value: f64,
+    pub threshold_value: f64,
+}
+
+/// 风险阈值突破数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskThresholdData {
+    pub rule_id: String,
+    pub user_id: String,
+    pub rule_name: String,
+    pub metric_name: String,
+    pub current_value: f64,
+    pub threshold_value: f64,
+    pub severity: String,
+}
+
+/// 风险恢复数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskNormalizedData {
+    pub rule_id: String,
+    pub user_id: String,
+    pub rule_name: String,
+    pub metric_name: String,
+    pub current_value: f64,
+    pub threshold_value: f64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Signal {
     pub symbol: String,
@@ -41,6 +89,7 @@ pub struct EventBus {
     market_tx: broadcast::Sender<MarketEvent>,
     trade_tx: broadcast::Sender<TradeEvent>,
     strategy_tx: broadcast::Sender<StrategyEvent>,
+    risk_tx: broadcast::Sender<RiskEvent>,
 }
 
 impl EventBus {
@@ -48,11 +97,13 @@ impl EventBus {
         let (market_tx, _) = broadcast::channel(1000);
         let (trade_tx, _) = broadcast::channel(1000);
         let (strategy_tx, _) = broadcast::channel(1000);
+        let (risk_tx, _) = broadcast::channel(1000);
 
         Self {
             market_tx,
             trade_tx,
             strategy_tx,
+            risk_tx,
         }
     }
 
@@ -142,6 +193,43 @@ impl EventBus {
         self.publish_strategy(StrategyEvent::Error(error));
     }
 
+    // ========== Risk Events ==========
+
+    /// Publish a risk event
+    pub fn publish_risk(&self, event: RiskEvent) {
+        let _ = self.risk_tx.send(event);
+    }
+
+    /// Subscribe to risk events
+    pub fn subscribe_risk(&self) -> broadcast::Receiver<RiskEvent> {
+        self.risk_tx.subscribe()
+    }
+
+    /// Publish alert triggered event
+    pub fn publish_alert_triggered(&self, alert: RiskAlertData) {
+        self.publish_risk(RiskEvent::AlertTriggered(alert));
+    }
+
+    /// Publish alert handled event
+    pub fn publish_alert_handled(&self, alert_id: String, handled_by: String) {
+        self.publish_risk(RiskEvent::AlertHandled(alert_id, handled_by));
+    }
+
+    /// Publish alert ignored event
+    pub fn publish_alert_ignored(&self, alert_id: String) {
+        self.publish_risk(RiskEvent::AlertIgnored(alert_id));
+    }
+
+    /// Publish risk threshold exceeded event
+    pub fn publish_threshold_exceeded(&self, data: RiskThresholdData) {
+        self.publish_risk(RiskEvent::RiskThresholdExceeded(data));
+    }
+
+    /// Publish risk normalized event
+    pub fn publish_risk_normalized(&self, data: RiskNormalizedData) {
+        self.publish_risk(RiskEvent::RiskNormalized(data));
+    }
+
     // ========== Utility Methods ==========
 
     /// Get the number of receivers for market events
@@ -157,6 +245,11 @@ impl EventBus {
     /// Get the number of receivers for strategy events
     pub fn strategy_receiver_count(&self) -> usize {
         self.strategy_tx.receiver_count()
+    }
+
+    /// Get the number of receivers for risk events
+    pub fn risk_receiver_count(&self) -> usize {
+        self.risk_tx.receiver_count()
     }
 }
 
@@ -177,6 +270,7 @@ mod tests {
         assert_eq!(bus.market_receiver_count(), 0);
         assert_eq!(bus.trade_receiver_count(), 0);
         assert_eq!(bus.strategy_receiver_count(), 0);
+        assert_eq!(bus.risk_receiver_count(), 0);
     }
 
     #[tokio::test]
@@ -259,13 +353,13 @@ mod tests {
             exchange_order_id: Some("EXCH123".to_string()),
             client_order_id: Some("CLIENT123".to_string()),
             symbol: "BTCUSDT".to_string(),
-            side: "buy".to_string(),
-            order_type: "limit".to_string(),
+            side: crate::core::trade::types::OrderSide::Buy,
+            order_type: crate::core::trade::types::OrderType::Limit,
             price: Some(50000.0),
             quantity: 0.5,
             filled_quantity: 0.0,
             avg_price: None,
-            status: "open".to_string(),
+            status: crate::core::trade::types::OrderState::Open,
             commission: 0.001,
             created_at: 1234567890,
             filled_at: None,
@@ -374,67 +468,107 @@ mod tests {
         assert_eq!(bus.market_receiver_count(), 0);
         assert_eq!(bus.trade_receiver_count(), 0);
         assert_eq!(bus.strategy_receiver_count(), 0);
+        assert_eq!(bus.risk_receiver_count(), 0);
     }
 
     #[tokio::test]
-    async fn test_event_bus_clone() {
-        let bus1 = EventBus::new();
-        let bus2 = bus1.clone();
+    async fn test_risk_events_alert_triggered() {
+        let bus = EventBus::new();
+        let mut rx = bus.subscribe_risk();
 
-        let ticker = Ticker {
-            symbol: "BTCUSDT".to_string(),
-            price: 50000.0,
-            price_change: 1000.0,
-            price_change_percent: 2.0,
-            high_24h: 51000.0,
-            low_24h: 49000.0,
-            volume_24h: 1000.0,
-            timestamp: 1234567890,
+        let alert = RiskAlertData {
+            id: "alert-1".to_string(),
+            rule_id: "rule-1".to_string(),
+            user_id: "user-1".to_string(),
+            severity: "high".to_string(),
+            title: "High Drawdown".to_string(),
+            message: "Drawdown exceeded 15%".to_string(),
+            strategy_instance_id: Some("instance-1".to_string()),
+            symbol: Some("BTCUSDT".to_string()),
+            current_value: 15.5,
+            threshold_value: 10.0,
         };
 
-        // Subscribe to original bus
-        let mut rx = bus1.subscribe_market();
+        bus.publish_alert_triggered(alert.clone());
 
-        // Publish from cloned bus
-        bus2.publish_ticker(ticker);
-
-        // Should receive event
         let received = rx.recv().await.unwrap();
         match received {
-            MarketEvent::Ticker(t) => {
-                assert_eq!(t.symbol, "BTCUSDT");
+            RiskEvent::AlertTriggered(a) => {
+                assert_eq!(a.id, "alert-1");
+                assert_eq!(a.severity, "high");
+                assert_eq!(a.current_value, 15.5);
             }
-            _ => panic!("Expected ticker event"),
+            _ => panic!("Expected alert triggered event"),
         }
     }
 
     #[tokio::test]
-    async fn test_position_updated_event() {
+    async fn test_risk_events_alert_handled() {
         let bus = EventBus::new();
-        let mut rx = bus.subscribe_trade();
+        let mut rx = bus.subscribe_risk();
 
-        let position = Position {
-            id: "pos-1".to_string(),
-            symbol: "BTCUSDT".to_string(),
-            side: "long".to_string(),
-            quantity: 1.0,
-            entry_price: 50000.0,
-            current_price: Some(51000.0),
-            unrealized_pnl: 1000.0,
-            realized_pnl: 0.0,
-            opened_at: 1234567890,
-        };
-
-        bus.publish_position_updated(position.clone());
+        bus.publish_alert_handled("alert-1".to_string(), "admin".to_string());
 
         let received = rx.recv().await.unwrap();
         match received {
-            TradeEvent::PositionUpdated(p) => {
-                assert_eq!(p.id, "pos-1");
-                assert_eq!(p.symbol, "BTCUSDT");
-                assert_eq!(p.unrealized_pnl, 1000.0);
+            RiskEvent::AlertHandled(id, handled_by) => {
+                assert_eq!(id, "alert-1");
+                assert_eq!(handled_by, "admin");
             }
-            _ => panic!("Expected position updated event"),
+            _ => panic!("Expected alert handled event"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_risk_events_threshold_exceeded() {
+        let bus = EventBus::new();
+        let mut rx = bus.subscribe_risk();
+
+        let data = RiskThresholdData {
+            rule_id: "rule-1".to_string(),
+            user_id: "user-1".to_string(),
+            rule_name: "Max Drawdown".to_string(),
+            metric_name: "drawdown".to_string(),
+            current_value: 15.5,
+            threshold_value: 10.0,
+            severity: "high".to_string(),
+        };
+
+        bus.publish_threshold_exceeded(data.clone());
+
+        let received = rx.recv().await.unwrap();
+        match received {
+            RiskEvent::RiskThresholdExceeded(d) => {
+                assert_eq!(d.rule_id, "rule-1");
+                assert_eq!(d.current_value, 15.5);
+            }
+            _ => panic!("Expected threshold exceeded event"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_risk_events_normalized() {
+        let bus = EventBus::new();
+        let mut rx = bus.subscribe_risk();
+
+        let data = RiskNormalizedData {
+            rule_id: "rule-1".to_string(),
+            user_id: "user-1".to_string(),
+            rule_name: "Max Drawdown".to_string(),
+            metric_name: "drawdown".to_string(),
+            current_value: 5.0,
+            threshold_value: 10.0,
+        };
+
+        bus.publish_risk_normalized(data.clone());
+
+        let received = rx.recv().await.unwrap();
+        match received {
+            RiskEvent::RiskNormalized(d) => {
+                assert_eq!(d.metric_name, "drawdown");
+                assert_eq!(d.current_value, 5.0);
+            }
+            _ => panic!("Expected risk normalized event"),
         }
     }
 

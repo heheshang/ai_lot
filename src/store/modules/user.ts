@@ -73,6 +73,29 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /**
+   * Restore user session from token
+   * Used by route guard to restore user state
+   */
+  async function restoreUser() {
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken) {
+      throw new Error('No token found');
+    }
+
+    token.value = storedToken;
+    const userId = storedToken.split(':')[0];
+    if (!userId) {
+      throw new Error('Invalid token format');
+    }
+
+    // Fetch current user data
+    const currentUser = await api.userApi.getCurrentUser(userId);
+    user.value = currentUser;
+
+    return currentUser;
+  }
+
   return {
     user,
     token,
@@ -85,5 +108,6 @@ export const useUserStore = defineStore('user', () => {
     logout,
     fetchCurrentUser,
     initFromStorage,
+    restoreUser,
   };
 });

@@ -172,24 +172,26 @@ const currentPrice = computed(() => {
     low: latest.low.toFixed(2),
     volume: latest.volume,
     prevClose: prev.close,
+    closeNum: latest.close,
+    prevCloseNum: prev.close,
   };
 });
 
 const priceChange = computed(() => {
   if (!currentPrice.value) return '--';
-  const change = currentPrice.value.close - currentPrice.value.prevClose;
+  const change = (currentPrice.value.closeNum || 0) - (currentPrice.value.prevCloseNum || 0);
   return (change >= 0 ? '+' : '') + change.toFixed(2);
 });
 
 const priceChangePercent = computed(() => {
   if (!currentPrice.value) return '--';
-  const percent = ((currentPrice.value.close - currentPrice.value.prevClose) / currentPrice.value.prevClose) * 100;
+  const percent = ((currentPrice.value.closeNum || 0) - (currentPrice.value.prevCloseNum || 0)) / (currentPrice.value.prevCloseNum || 1) * 100;
   return (percent >= 0 ? '+' : '') + percent.toFixed(2);
 });
 
 const priceClass = computed(() => {
   if (!currentPrice.value) return '';
-  return parseFloat(currentPrice.value.close) >= currentPrice.value.prevClose ? 'price-up' : 'price-down';
+  return (currentPrice.value.closeNum || 0) >= (currentPrice.value.prevCloseNum || 0) ? 'price-up' : 'price-down';
 });
 
 // 颜色配置

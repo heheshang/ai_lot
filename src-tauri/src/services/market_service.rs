@@ -2,11 +2,13 @@ use crate::core::trade::exchange::{Exchange, ExchangeName, binance::BinanceExcha
 use crate::core::trade::types::*;
 use crate::core::event::EventBus;
 use crate::infrastructure::Database;
+use crate::infrastructure::cache::{get_klines, insert_klines};
 use anyhow::{anyhow, Result};
 use sqlx::Row;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+use std::time::Instant;
 
 pub struct MarketService {
     exchanges: Arc<RwLock<Vec<Arc<dyn Exchange>>>>,
@@ -84,6 +86,14 @@ impl MarketService {
             return Err(anyhow!("No exchanges available. Call init_binance() first."));
         }
 
+        // Start event forwarding for Binance (if not already started)
+        if let Some(exchange) = exchanges.first() {
+            if exchange.name() == ExchangeName::Binance {
+                // This will spawn forwarding tasks if they don't exist
+                let _ = self.start_event_forwarding(ExchangeName::Binance).await;
+            }
+        }
+
         for exchange in exchanges.iter() {
             exchange.subscribe_ticker(symbols.clone()).await?;
         }
@@ -100,6 +110,14 @@ impl MarketService {
             return Err(anyhow!("No exchanges available. Call init_binance() first."));
         }
 
+        // Start event forwarding for Binance (if not already started)
+        if let Some(exchange) = exchanges.first() {
+            if exchange.name() == ExchangeName::Binance {
+                // This will spawn forwarding tasks if they don't exist
+                let _ = self.start_event_forwarding(ExchangeName::Binance).await;
+            }
+        }
+
         for exchange in exchanges.iter() {
             exchange.subscribe_kline(symbols.clone(), interval).await?;
         }
@@ -108,26 +126,50 @@ impl MarketService {
         Ok(())
     }
 
-    /// Get K-line data from exchange
+    /// Get K-line data from exchange (with cache support - P6-05)
     pub async fn get_klines(
         &self,
         symbol: &str,
         interval: &str,
         limit: usize,
     ) -> Result<Vec<Kline>> {
+        let start_time = Instant::now();
+
+        // Try to get from in-memory cache first
+        let exchange_name = "binance";
+        if let Some(cached) = get_klines(exchange_name, symbol, interval).await {
+            log::debug!("Klines cache HIT: {} {} ({} items)", symbol, interval, cached.len());
+            let elapsed = start_time.elapsed().as_millis();
+            log::info!("get_klines (cached): {}ms", elapsed);
+
+            // Return cached data if it has enough items
+            if cached.len() >= limit {
+                return Ok(cached.into_iter().take(limit).collect());
+            }
+        }
+
+        log::debug!("Klines cache MISS: {} {}", symbol, interval);
+
+        // Cache miss - fetch from exchange
         let exchange = self.get_exchange(ExchangeName::Binance)
             .await
             .ok_or_else(|| anyhow!("Exchange not found"))?;
 
-        let interval = Interval::from_str(interval)
+        let interval_enum = Interval::from_str(interval)
             .ok_or_else(|| anyhow!("Invalid interval: {}", interval))?;
 
-        let klines = exchange.get_klines(symbol, interval, limit).await?;
+        let klines = exchange.get_klines(symbol, interval_enum, limit).await?;
 
-        // Optionally cache to database
+        // Cache the results
+        insert_klines(exchange_name, symbol, interval, klines.clone()).await;
+
+        // Also cache to database for persistence
         if let Err(e) = self.save_klines(&klines).await {
-            log::warn!("Failed to cache klines: {}", e);
+            log::warn!("Failed to cache klines to database: {}", e);
         }
+
+        let elapsed = start_time.elapsed().as_millis();
+        log::info!("get_klines (exchange): {}ms", elapsed);
 
         Ok(klines)
     }

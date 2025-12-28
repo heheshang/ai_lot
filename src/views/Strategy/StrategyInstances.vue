@@ -19,7 +19,7 @@
 
     <!-- 统计概览 -->
     <el-row :gutter="16" class="stats-row">
-      <el-col :span="6">
+      <el-col :span="4">
         <div class="stat-card stat-running">
           <div class="stat-icon">
             <el-icon :size="28"><VideoPlay /></el-icon>
@@ -30,10 +30,21 @@
           </div>
         </div>
       </el-col>
-      <el-col :span="6">
-        <div class="stat-card stat-stopped">
+      <el-col :span="4">
+        <div class="stat-card stat-paused">
           <div class="stat-icon">
             <el-icon :size="28"><VideoPause /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ pausedCount }}</div>
+            <div class="stat-label">已暂停</div>
+          </div>
+        </div>
+      </el-col>
+      <el-col :span="4">
+        <div class="stat-card stat-stopped">
+          <div class="stat-icon">
+            <el-icon :size="28"><CircleCloseFilled /></el-icon>
           </div>
           <div class="stat-info">
             <div class="stat-value">{{ stoppedCount }}</div>
@@ -41,7 +52,7 @@
           </div>
         </div>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="4">
         <div class="stat-card stat-error">
           <div class="stat-icon">
             <el-icon :size="28"><WarningFilled /></el-icon>
@@ -52,7 +63,7 @@
           </div>
         </div>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="8">
         <div class="stat-card stat-total">
           <div class="stat-icon">
             <el-icon :size="28"><DataLine /></el-icon>
@@ -146,18 +157,18 @@
 
             <div class="instance-row">
               <span class="row-label">运行时长</span>
-              <span class="row-value">{{ formatRuntime(instance.startTime) }}</span>
+              <span class="row-value">{{ formatRuntime((instance as any).startTime) }}</span>
             </div>
 
-            <div class="instance-stats" v-if="instance.stats">
+            <div class="instance-stats" v-if="(instance as any).stats">
               <div class="mini-stat">
                 <span class="mini-stat-label">交易次数</span>
-                <span class="mini-stat-value">{{ instance.stats.tradeCount || 0 }}</span>
+                <span class="mini-stat-value">{{ (instance as any).stats?.tradeCount || 0 }}</span>
               </div>
               <div class="mini-stat">
                 <span class="mini-stat-label">盈亏</span>
-                <span class="mini-stat-value" :class="(instance.stats.pnl || 0) >= 0 ? 'profit' : 'loss'">
-                  {{ (instance.stats.pnl || 0) >= 0 ? '+' : '' }}{{ instance.stats.pnl || 0 }}
+                <span class="mini-stat-value" :class="((instance as any).stats?.pnl || 0) >= 0 ? 'profit' : 'loss'">
+                  {{ ((instance as any).stats?.pnl || 0) >= 0 ? '+' : '' }}{{ (instance as any).stats?.pnl || 0 }}
                 </span>
               </div>
             </div>
@@ -179,7 +190,16 @@
                 暂停
               </el-button>
               <el-button
-                v-if="instance.status === 'Running' || instance.status === 'Paused'"
+                v-if="instance.status === 'Paused'"
+                size="small"
+                type="success"
+                @click="resumeInstance(instance.id)"
+              >
+                <el-icon><VideoPlay /></el-icon>
+                恢复
+              </el-button>
+              <el-button
+                v-if="instance.status === 'Running' || instance.status === 'Paused' || instance.status === 'Error'"
                 size="small"
                 type="danger"
                 @click="stopInstance(instance.id)"
@@ -257,7 +277,15 @@
                 暂停
               </el-button>
               <el-button
-                v-if="row.status === 'Running' || row.status === 'Paused'"
+                v-if="row.status === 'Paused'"
+                type="success"
+                link
+                @click="resumeInstance(row.id)"
+              >
+                恢复
+              </el-button>
+              <el-button
+                v-if="row.status === 'Running' || row.status === 'Paused' || row.status === 'Error'"
                 type="danger"
                 link
                 @click="stopInstance(row.id)"
@@ -387,6 +415,7 @@ const rules: FormRules = {
 
 // 计算统计数据
 const runningCount = computed(() => instances.value.filter(i => i.status === 'Running').length);
+const pausedCount = computed(() => instances.value.filter(i => i.status === 'Paused').length);
 const stoppedCount = computed(() => instances.value.filter(i => i.status === 'Stopped').length);
 const errorCount = computed(() => instances.value.filter(i => i.status === 'Error').length);
 
@@ -454,6 +483,17 @@ const pauseInstance = async (id: string) => {
   }
 };
 
+// 恢复策略实例
+const resumeInstance = async (id: string) => {
+  try {
+    await strategyEngineApi.resume(id);
+    ElMessage.success('策略实例已恢复');
+    await loadInstances();
+  } catch (error: any) {
+    ElMessage.error('恢复策略失败: ' + error.message);
+  }
+};
+
 // 停止策略实例
 const stopInstance = async (id: string) => {
   try {
@@ -474,7 +514,7 @@ const stopInstance = async (id: string) => {
 };
 
 // 查看实例详情
-const viewInstance = (id: string) => {
+const viewInstance = (_id: string) => {
   ElMessage.info('实例详情功能开发中');
 };
 
@@ -598,6 +638,10 @@ onUnmounted(() => {
     background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
   }
 
+  &.stat-paused .stat-icon {
+    background: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%);
+  }
+
   &.stat-stopped .stat-icon {
     background: linear-gradient(135deg, #909399 0%, #b3b8bd 100%);
   }
@@ -669,6 +713,11 @@ onUnmounted(() => {
   &.instance-running {
     border-color: rgba(103, 194, 58, 0.2);
     background: linear-gradient(to bottom, #f0f9ff, #fff);
+  }
+
+  &.instance-paused {
+    border-color: rgba(230, 162, 60, 0.2);
+    background: linear-gradient(to bottom, #fdf6ec, #fff);
   }
 
   &.instance-error {
@@ -849,6 +898,15 @@ onUnmounted(() => {
 
     .status-dot {
       background: #67c23a;
+    }
+  }
+
+  &.status-paused {
+    background: rgba(230, 162, 60, 0.1);
+    color: #e6a23c;
+
+    .status-dot {
+      background: #e6a23c;
     }
   }
 

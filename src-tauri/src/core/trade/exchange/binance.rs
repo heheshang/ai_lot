@@ -1,5 +1,6 @@
 use super::super::types::*;
 use super::r#trait::{Exchange, ExchangeName};
+use super::client::BinanceClient;
 use async_trait::async_trait;
 use anyhow::{anyhow, Result};
 use futures_util::{StreamExt, SinkExt};
@@ -18,14 +19,17 @@ pub struct BinanceExchange {
     client: Client,
     ticker_tx: broadcast::Sender<Ticker>,
     kline_tx: broadcast::Sender<Kline>,
+    order_tx: broadcast::Sender<Order>,
     connection_state: Arc<RwLock<bool>>,
     ws_task_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    listen_key: Arc<Mutex<Option<String>>>,
 }
 
 impl BinanceExchange {
     pub fn new(api_key: Option<String>, api_secret: Option<String>) -> Self {
         let (ticker_tx, _) = broadcast::channel(1000);
         let (kline_tx, _) = broadcast::channel(1000);
+        let (order_tx, _) = broadcast::channel(1000);
 
         Self {
             api_key,
@@ -33,8 +37,10 @@ impl BinanceExchange {
             client: Client::new(),
             ticker_tx,
             kline_tx,
+            order_tx,
             connection_state: Arc::new(RwLock::new(false)),
             ws_task_handle: Arc::new(Mutex::new(None)),
+            listen_key: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -76,7 +82,7 @@ impl BinanceExchange {
             low: k["l"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
             close: k["c"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
             volume: k["v"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
-            quote_volume: k["q"].as_str().map(|s| s.parse().ok()).flatten(),
+            quote_volume: k["q"].as_str().and_then(|s| s.parse().ok()),
         })
     }
 
@@ -149,7 +155,7 @@ impl BinanceExchange {
         let connection_state = self.connection_state.clone();
         let stream_name = streams.clone();
 
-        let handle = tokio::spawn(async move {
+        let _handle = tokio::spawn(async move {
             log::info!("WebSocket task started for stream: {}", stream_name);
 
             // Retry logic for WebSocket connection
@@ -261,7 +267,228 @@ impl BinanceExchange {
             low: k["l"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
             close: k["c"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
             volume: k["v"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
-            quote_volume: k["q"].as_str().map(|s| s.parse().ok()).flatten(),
+            quote_volume: k["q"].as_str().and_then(|s| s.parse().ok()),
+        })
+    }
+
+    // ========== REST API Helper methods ==========
+
+    /// 创建 Binance REST 客户端
+    fn rest_client(&self) -> Result<BinanceClient> {
+        let api_key = self.api_key.clone()
+            .ok_or_else(|| anyhow!("API key not configured"))?;
+        let api_secret = self.api_secret.clone()
+            .ok_or_else(|| anyhow!("API secret not configured"))?;
+
+        // TODO: 从配置读取 testnet 设置
+        Ok(BinanceClient::new(api_key, api_secret, false))
+    }
+
+    /// 解析订单状态
+    fn parse_order_state(status: &str) -> OrderState {
+        match status {
+            "NEW" => OrderState::Open,
+            "PARTIALLY_FILLED" => OrderState::PartiallyFilled,
+            "FILLED" => OrderState::Filled,
+            "CANCELED" => OrderState::Canceled,
+            "PENDING_CANCEL" => OrderState::Pending,
+            "REJECTED" => OrderState::Rejected,
+            "EXPIRED" => OrderState::Canceled,
+            _ => OrderState::Pending,
+        }
+    }
+
+    /// 从 Binance API 响应解析订单
+    fn parse_order(&self, json: &Value, request: &OrderRequest) -> Result<Order> {
+        Ok(Order {
+            id: json["orderId"].as_str().unwrap_or(&json["clientOrderId"].as_str().unwrap_or("")).to_string(),
+            exchange_order_id: Some(json["orderId"].as_str().unwrap_or("").to_string()),
+            client_order_id: json["clientOrderId"].as_str().map(|s| s.to_string()),
+            symbol: json["symbol"].as_str().unwrap_or(&request.symbol).to_string(),
+            side: request.side,
+            order_type: request.order_type,
+            price: request.price,
+            quantity: request.quantity,
+            filled_quantity: json["executedQty"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+            avg_price: json["avgPrice"].as_str().and_then(|s: &str| s.parse().ok())
+                .or_else(|| json["cummulativeQuoteQty"].as_str().and_then(|q: &str| {
+                    let filled = json["executedQty"].as_str().unwrap_or("0").parse::<f64>().unwrap_or(0.0);
+                    let quote = q.parse::<f64>().unwrap_or(0.0);
+                    if filled > 0.0 { Some(quote / filled) } else { None }
+                })),
+            status: Self::parse_order_state(json["status"].as_str().unwrap_or("UNKNOWN")),
+            commission: 0.0, // 需要从交易历史获取
+            created_at: json["time"].as_i64().unwrap_or(0),
+            filled_at: json["updateTime"].as_i64(),
+        })
+    }
+
+    // ========== User Data Stream methods ==========
+
+    /// 创建用户数据流 listenKey
+    async fn create_listen_key(&self) -> Result<String> {
+        let client = self.rest_client()?;
+
+        let response = client.post_signed("/api/v3/userDataStream", &[]).await
+            .map_err(|e| anyhow!("Failed to create listen key: {}", e))?;
+
+        response["listenKey"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| anyhow!("Invalid listen key response"))
+    }
+
+    /// 保持 listenKey 活跃（每30分钟调用一次）
+    async fn keepalive_listen_key(&self) -> Result<()> {
+        let client = self.rest_client()?;
+        let guard = self.listen_key.lock().await;
+        let listen_key = guard.as_ref()
+            .ok_or_else(|| anyhow!("No listen key available"))?;
+
+        let endpoint = format!("/api/v3/userDataStream?listenKey={}", listen_key);
+        let _ = client.put_signed(&endpoint, &[]).await
+            .map_err(|e| anyhow!("Failed to keepalive listen key: {}", e))?;
+
+        Ok(())
+    }
+
+    /// 用户数据流 WebSocket 循环
+    async fn user_data_stream_loop(&self) -> Result<()> {
+        let listen_key = {
+            let guard = self.listen_key.lock().await;
+            guard.clone().ok_or_else(|| anyhow!("No listen key"))?
+        };
+
+        let url = format!("{}/ws/{}", WS_API_BASE, listen_key);
+        log::info!("Connecting to user data stream: {}", url);
+
+        let (ws_stream, _) = tokio_tungstenite::connect_async(&url).await?;
+        let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+
+        log::info!("User data stream connected");
+
+        // 启动 keep-alive 任务（定时刷新 listenKey）
+        let connection_state = self.connection_state.clone();
+        let listen_key_ref = self.listen_key.clone();
+        let api_key = self.api_key.clone();
+        let api_secret = self.api_secret.clone();
+
+        let keepalive_handle = tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1800)); // 30分钟
+            loop {
+                interval.tick().await;
+
+                let is_connected = *connection_state.read().await;
+                if !is_connected {
+                    log::info!("Keep-alive task stopping");
+                    break;
+                }
+
+                // 保持 listenKey 有效（通过 REST API）
+                if let (Some(key), Some(secret), Some(lk)) = (&api_key, &api_secret, listen_key_ref.lock().await.as_ref()) {
+                    let client = BinanceClient::new(key.clone(), secret.clone(), false);
+                    let endpoint = format!("/api/v3/userDataStream?listenKey={}", lk);
+                    if let Err(e) = client.put_signed(&endpoint, &[]).await {
+                        log::error!("Failed to keepalive listen key: {}", e);
+                    } else {
+                        log::debug!("Listen key keepalive sent");
+                    }
+                }
+            }
+        });
+
+        // 消息处理循环
+        while let Some(msg) = ws_receiver.next().await {
+            match msg {
+                Ok(Message::Text(text)) => {
+                    if let Ok(json) = serde_json::from_str::<Value>(&text) {
+                        if let Some(event_type) = json.get("e").and_then(|e| e.as_str()) {
+                            match event_type {
+                                "executionReport" => {
+                                    if let Ok(order) = self.parse_execution_report(&json) {
+                                        let _ = self.order_tx.send(order);
+                                    }
+                                }
+                                "account" => {
+                                    // 账户更新事件
+                                    log::debug!("Account update: {}", json);
+                                }
+                                "outboundAccountPosition" => {
+                                    // 账户持仓更新
+                                    log::debug!("Account position update: {}", json);
+                                }
+                                _ => {
+                                    log::debug!("Unhandled user data event: {}", event_type);
+                                }
+                            }
+                        }
+                    }
+                }
+                Ok(Message::Ping(data)) => {
+                    let _ = ws_sender.send(Message::Pong(data)).await;
+                }
+                Ok(Message::Close(_)) => {
+                    log::warn!("User data stream connection closed");
+                    break;
+                }
+                Err(e) => {
+                    log::error!("User data stream error: {}", e);
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        keepalive_handle.abort();
+        Ok(())
+    }
+
+    /// 解析执行报告事件
+    fn parse_execution_report(&self, json: &Value) -> Result<Order> {
+        Self::parse_execution_report_static(json)
+    }
+
+    /// 静态版本的 executionReport 解析器（用于 spawned tasks）
+    fn parse_execution_report_static(json: &Value) -> Result<Order> {
+        // Binance executionReport event field mapping:
+        // s = symbol, S = side, o = order type, p = price, q = quantity
+        // i = order id, c = client order id, z = filled quantity
+        // X = order status, ap = average price, n = commission
+        // T = trade time, E = event time
+
+        let side = match json.get("S").and_then(|s| s.as_str()) {
+            Some("BUY") => OrderSide::Buy,
+            Some("SELL") => OrderSide::Sell,
+            _ => return Err(anyhow!("Invalid order side")),
+        };
+
+        let order_type = match json.get("o").and_then(|o| o.as_str()) {
+            Some("MARKET") => OrderType::Market,
+            Some("LIMIT") => OrderType::Limit,
+            Some("STOP_LOSS_LIMIT") => OrderType::StopLimit,
+            Some("TAKE_PROFIT_LIMIT") => OrderType::StopLimit,
+            _ => OrderType::Limit,
+        };
+
+        let price = json.get("p").and_then(|p| p.as_f64());
+        let quantity = json.get("q").and_then(|q| q.as_f64()).unwrap_or(0.0);
+        let filled_quantity = json.get("z").and_then(|z| z.as_f64()).unwrap_or(0.0);
+
+        Ok(Order {
+            id: json.get("i").and_then(|i| i.as_i64()).map(|i| i.to_string()).unwrap_or_default(),
+            exchange_order_id: json.get("i").and_then(|i| i.as_i64()).map(|i| i.to_string()),
+            client_order_id: json.get("c").and_then(|c| c.as_str()).map(|s| s.to_string()),
+            symbol: json.get("s").and_then(|s| s.as_str()).unwrap_or("").to_string(),
+            side,
+            order_type,
+            price,
+            quantity,
+            filled_quantity,
+            avg_price: json.get("ap").and_then(|ap| ap.as_f64()),
+            status: Self::parse_order_state(json.get("X").and_then(|x| x.as_str()).unwrap_or("NEW")),
+            commission: json.get("n").and_then(|n| n.as_f64()).unwrap_or(0.0),
+            created_at: json.get("T").and_then(|t| t.as_i64()).unwrap_or(0),
+            filled_at: json.get("T").and_then(|t| t.as_i64()),
         })
     }
 }
@@ -343,7 +570,7 @@ impl Exchange for BinanceExchange {
                     low: item[3].as_str().unwrap().parse().unwrap_or(0.0),
                     close: item[4].as_str().unwrap().parse().unwrap_or(0.0),
                     volume: item[5].as_str().unwrap().parse().unwrap_or(0.0),
-                    quote_volume: item[7].as_str().map(|s| s.parse().ok()).flatten(),
+                    quote_volume: item[7].as_str().and_then(|s| s.parse().ok()),
                 })
             })
             .collect::<Result<Vec<Kline>>>()?;
@@ -399,5 +626,282 @@ impl Exchange for BinanceExchange {
 
     fn kline_stream(&self) -> broadcast::Receiver<Kline> {
         self.kline_tx.subscribe()
+    }
+
+    fn order_stream(&self) -> broadcast::Receiver<Order> {
+        self.order_tx.subscribe()
+    }
+
+    async fn subscribe_user_data(&self) -> Result<()> {
+        // 如果还没有 listen key，创建一个
+        let mut guard = self.listen_key.lock().await;
+        if guard.is_none() {
+            let listen_key = self.create_listen_key().await?;
+            *guard = Some(listen_key);
+        }
+        drop(guard);
+
+        // 获取 API 密钥用于 keep-alive
+        let api_key = self.api_key.clone()
+            .ok_or_else(|| anyhow!("API key not configured"))?;
+        let api_secret = self.api_secret.clone()
+            .ok_or_else(|| anyhow!("API secret not configured"))?;
+
+        // 启动用户数据流循环
+        let connection_state = self.connection_state.clone();
+        let listen_key_ref = self.listen_key.clone();
+        let order_tx = self.order_tx.clone();
+
+        let handle = tokio::spawn(async move {
+            // 重新创建 WebSocket 连接需要的组件
+            let url = {
+                let guard = listen_key_ref.lock().await;
+                let listen_key = guard.as_ref().unwrap();
+                format!("{}/ws/{}", WS_API_BASE, listen_key)
+            };
+
+            log::info!("Starting user data stream: {}", url);
+
+            let (ws_stream, _) = match tokio_tungstenite::connect_async(&url).await {
+                Ok(stream) => stream,
+                Err(e) => {
+                    log::error!("Failed to connect to user data stream: {}", e);
+                    return;
+                }
+            };
+
+            let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+
+            // 启动 keep-alive 任务
+            let connection_state_ka = connection_state.clone();
+            let listen_key_ref_ka = listen_key_ref.clone();
+            let api_key_ka = api_key.clone();
+            let api_secret_ka = api_secret.clone();
+
+            let keepalive_handle = tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1800)); // 30分钟
+                loop {
+                    interval.tick().await;
+
+                    let is_connected = *connection_state_ka.read().await;
+                    if !is_connected {
+                        log::info!("Keep-alive task stopping");
+                        break;
+                    }
+
+                    // 保持 listenKey 有效
+                    if let Some(lk) = listen_key_ref_ka.lock().await.as_ref() {
+                        let client = BinanceClient::new(api_key_ka.clone(), api_secret_ka.clone(), false);
+                        let endpoint = format!("/api/v3/userDataStream?listenKey={}", lk);
+                        if let Err(e) = client.put_signed(&endpoint, &[]).await {
+                            log::error!("Failed to keepalive listen key: {}", e);
+                        } else {
+                            log::debug!("Listen key keepalive sent");
+                        }
+                    }
+                }
+            });
+
+            // 消息处理循环
+            while let Some(msg) = ws_receiver.next().await {
+                match msg {
+                    Ok(Message::Text(text)) => {
+                        if let Ok(json) = serde_json::from_str::<Value>(&text) {
+                            if let Some(event_type) = json.get("e").and_then(|e| e.as_str()) {
+                                match event_type {
+                                    "executionReport" => {
+                                        if let Ok(order) = Self::parse_execution_report_static(&json) {
+                                            let _ = order_tx.send(order);
+                                        }
+                                    }
+                                    "account" => {
+                                        log::debug!("Account update: {}", json);
+                                    }
+                                    "outboundAccountPosition" => {
+                                        log::debug!("Account position update: {}", json);
+                                    }
+                                    _ => {
+                                        log::debug!("Unhandled user data event: {}", event_type);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Ok(Message::Ping(data)) => {
+                        let _ = ws_sender.send(Message::Pong(data)).await;
+                    }
+                    Ok(Message::Close(_)) => {
+                        log::warn!("User data stream connection closed");
+                        break;
+                    }
+                    Err(e) => {
+                        log::error!("User data stream error: {}", e);
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+
+            keepalive_handle.abort();
+        });
+
+        // 保存 task handle
+        let mut ws_handle = self.ws_task_handle.lock().await;
+        *ws_handle = Some(handle);
+
+        Ok(())
+    }
+
+    // ========== Trading operations ==========
+
+    async fn place_order(&self, request: &OrderRequest) -> Result<Order> {
+        let client = self.rest_client()?;
+
+        let symbol = request.symbol.to_uppercase();
+        let side = request.side.to_string().to_uppercase();
+        let order_type = request.order_type.to_string().to_uppercase();
+        let quantity = request.quantity.to_string();
+        let price_str = request.price.map(|p| p.to_string());
+
+        let mut params = vec![
+            ("symbol", symbol.as_str()),
+            ("side", side.as_str()),
+            ("type", order_type.as_str()),
+            ("quantity", quantity.as_str()),
+        ];
+
+        // 添加可选参数
+        if let Some(ref price) = price_str {
+            params.push(("price", price.as_str()));
+        }
+
+        // MARKET 订单不需要 timeInForce
+        if request.order_type != OrderType::Market {
+            params.push(("timeInForce", "GTC"));
+        }
+
+        let response = client.post_signed("/api/v3/order", &params).await
+            .map_err(|e| anyhow!("Place order failed: {}", e))?;
+
+        self.parse_order(&response, request)
+    }
+
+    async fn cancel_order(&self, order_id: &str) -> Result<()> {
+        let client = self.rest_client()?;
+
+        let params = vec![("orderId", order_id)];
+
+        client.delete_signed("/api/v3/order", &params).await
+            .map_err(|e| anyhow!("Cancel order failed: {}", e))?;
+
+        Ok(())
+    }
+
+    async fn get_order(&self, order_id: &str) -> Result<Order> {
+        let client = self.rest_client()?;
+
+        let params = vec![("orderId", order_id)];
+
+        let response = client.get_signed("/api/v3/order", &params).await
+            .map_err(|e| anyhow!("Get order failed: {}", e))?;
+
+        let dummy_request = OrderRequest {
+            symbol: response["symbol"].as_str().unwrap_or("").to_string(),
+            side: match response["side"].as_str().unwrap_or("") {
+                "BUY" => OrderSide::Buy,
+                "SELL" => OrderSide::Sell,
+                _ => OrderSide::Buy,
+            },
+            order_type: match response["type"].as_str().unwrap_or("") {
+                "LIMIT" => OrderType::Limit,
+                "MARKET" => OrderType::Market,
+                "STOP_LOSS_LIMIT" => OrderType::StopLimit,
+                _ => OrderType::Limit,
+            },
+            price: response["price"].as_str().and_then(|s| s.parse().ok()),
+            stop_price: None,
+            quantity: response["origQty"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+            client_order_id: None,
+            time_in_force: None,
+        };
+
+        self.parse_order(&response, &dummy_request)
+    }
+
+    async fn get_open_orders(&self, symbol: Option<&str>) -> Result<Vec<Order>> {
+        let client = self.rest_client()?;
+
+        let params = if let Some(sym) = symbol {
+            vec![("symbol", sym)]
+        } else {
+            vec![]
+        };
+
+        let response = client.get_signed("/api/v3/openOrders", &params).await
+            .map_err(|e| anyhow!("Get open orders failed: {}", e))?;
+
+        let orders = response.as_array()
+            .ok_or_else(|| anyhow!("Invalid response format"))?
+            .iter()
+            .map(|item| {
+                let dummy_request = OrderRequest {
+                    symbol: item["symbol"].as_str().unwrap_or("").to_string(),
+                    side: match item["side"].as_str().unwrap_or("") {
+                        "BUY" => OrderSide::Buy,
+                        "SELL" => OrderSide::Sell,
+                        _ => OrderSide::Buy,
+                    },
+                    order_type: match item["type"].as_str().unwrap_or("") {
+                        "LIMIT" => OrderType::Limit,
+                        "MARKET" => OrderType::Market,
+                        "STOP_LOSS_LIMIT" => OrderType::StopLimit,
+                        _ => OrderType::Limit,
+                    },
+                    price: item["price"].as_str().and_then(|s| s.parse().ok()),
+                    stop_price: None,
+                    quantity: item["origQty"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                    client_order_id: None,
+                    time_in_force: None,
+                };
+                self.parse_order(item, &dummy_request)
+            })
+            .collect::<Result<Vec<Order>>>()?;
+
+        Ok(orders)
+    }
+
+    async fn get_balance(&self) -> Result<Vec<Balance>> {
+        let client = self.rest_client()?;
+
+        let response = client.get_signed("/api/v3/account", &[]).await
+            .map_err(|e| anyhow!("Get balance failed: {}", e))?;
+
+        let balances = response["balances"].as_array()
+            .ok_or_else(|| anyhow!("Invalid balances format"))?
+            .iter()
+            .map(|item| -> Result<Balance> {
+                let free = item["free"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let locked = item["locked"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+
+                if (free + locked) > 0.0 {
+                    Ok(Balance {
+                        asset: item["asset"].as_str().unwrap_or("").to_string(),
+                        free,
+                        locked,
+                        total: free + locked,
+                    })
+                } else {
+                    Err(anyhow!("Skip zero balance"))
+                }
+            })
+            .filter_map(|r: Result<Balance>| r.ok())
+            .collect();
+
+        Ok(balances)
+    }
+
+    async fn get_positions(&self) -> Result<Vec<Position>> {
+        // Binance SPOT 没有持仓概念
+        Ok(Vec::new())
     }
 }

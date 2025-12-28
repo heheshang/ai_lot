@@ -165,7 +165,7 @@
               <el-icon><CopyDocument /></el-icon>
               复制
             </el-button>
-            <el-dropdown trigger="click" @command="(cmd) => handleAction(cmd, strategy.id)">
+            <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, strategy.id)">
               <el-button size="small">
                 <el-icon><MoreFilled /></el-icon>
               </el-button>
@@ -258,7 +258,7 @@
             <el-button-group size="small">
               <el-button type="primary" link @click="editStrategy(row.id)">编辑</el-button>
               <el-button type="primary" link @click="copyStrategy(row.id)">复制</el-button>
-              <el-dropdown trigger="click" @command="(cmd) => handleAction(cmd, row.id)">
+              <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, row.id)">
                 <el-button type="primary" link>
                   更多<el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </el-button>
@@ -443,7 +443,8 @@ const filteredStrategies = computed(() => {
     } else if (sortBy.value === 'return_rate') {
       return (b.stats?.return_rate || 0) - (a.stats?.return_rate || 0);
     } else {
-      return new Date(b[sortBy.value]).getTime() - new Date(a[sortBy.value]).getTime();
+      const key = sortBy.value as keyof typeof a;
+      return new Date(a[key] as string).getTime() - new Date(b[key] as string).getTime();
     }
   });
 
@@ -554,7 +555,7 @@ const editStrategy = (id: number) => {
   router.push(`/strategy/editor/${id}`);
 };
 
-const copyStrategy = async (id: number) => {
+const copyStrategy = async (_id: number) => {
   try {
     // TODO: 调用复制策略API
     ElMessage.success('策略复制成功');

@@ -2,6 +2,11 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { Ticker, Kline } from '@/types';
 import * as api from '@/api/tauri';
+import { listen } from '@tauri-apps/api/event';
+
+// Tauri event names
+const MARKET_TICKER_EVENT = 'market:ticker';
+const MARKET_KLINE_EVENT = 'market:kline';
 
 /**
  * Market Status from Tauri
@@ -24,6 +29,10 @@ export const useMarketStore = defineStore('market', () => {
   const marketStatus = ref<MarketStatus | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
+
+  // Event listeners cleanup functions
+  let tickerUnlisten: (() => void) | null = null;
+  let klineUnlisten: (() => void) | null = null;
 
   // ========== Getters (Computed) ==========
   const currentTicker = computed(() => tickers.value.get(currentSymbol.value));
@@ -202,6 +211,16 @@ export const useMarketStore = defineStore('market', () => {
    * 清除所有数据
    */
   function clear() {
+    // Clean up event listeners
+    if (tickerUnlisten) {
+      tickerUnlisten();
+      tickerUnlisten = null;
+    }
+    if (klineUnlisten) {
+      klineUnlisten();
+      klineUnlisten = null;
+    }
+
     tickers.value.clear();
     klines.value.clear();
     symbols.value = [];
@@ -211,11 +230,47 @@ export const useMarketStore = defineStore('market', () => {
   }
 
   /**
-   * 初始化市场数据
+   * 初始化市场数据和事件监听
    */
   async function initialize() {
     try {
       loading.value = true;
+
+      // 设置 Tauri 事件监听器
+      if (!tickerUnlisten) {
+        tickerUnlisten = await listen<Ticker>(MARKET_TICKER_EVENT, (event) => {
+          const ticker = event.payload;
+          tickers.value.set(ticker.symbol, ticker);
+          logDebug(`Received ticker update: ${ticker.symbol} @ ${ticker.price}`);
+        });
+      }
+
+      if (!klineUnlisten) {
+        klineUnlisten = await listen<Kline>(MARKET_KLINE_EVENT, (event) => {
+          const kline = event.payload;
+          const key = `${kline.symbol}_${kline.timeframe}`;
+          const data = klines.value.get(key) || [];
+
+          // Find if this kline already exists (by timestamp)
+          const existingIndex = data.findIndex(k => k.timestamp === kline.timestamp);
+
+          if (existingIndex >= 0) {
+            // Update existing kline
+            data[existingIndex] = kline;
+          } else {
+            // Add new kline
+            data.push(kline);
+            // Keep max 1000 klines in memory
+            if (data.length > 1000) {
+              data.shift();
+            }
+          }
+
+          klines.value.set(key, data);
+          logDebug(`Received kline update: ${kline.symbol} ${kline.timeframe}`);
+        });
+      }
+
       await Promise.all([
         loadSymbols(),
         getMarketStatus(),
@@ -227,6 +282,15 @@ export const useMarketStore = defineStore('market', () => {
       throw err;
     } finally {
       loading.value = false;
+    }
+  }
+
+  /**
+   * Debug logging helper
+   */
+  function logDebug(message: string) {
+    if (import.meta.env.DEV) {
+      console.log(`[MarketStore] ${message}`);
     }
   }
 

@@ -77,7 +77,7 @@ pub async fn strategy_validate_code(code: String) -> Result<bool, String> {
 
     // 尝试执行代码（语法检查）
     let params = json!({});
-    let _ = executor.on_init(&code, &params)
+    executor.on_init(&code, &params)
         .map_err(|e| format!("Syntax error: {}", e))?;
 
     Ok(true)

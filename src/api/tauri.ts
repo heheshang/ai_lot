@@ -195,6 +195,18 @@ export const strategyEngineApi = {
     invokeRaw<void>('strategy_engine_stop', { id }),
 
   /**
+   * 暂停策略实例
+   */
+  pause: (id: string) =>
+    invokeRaw<void>('strategy_engine_pause', { id }),
+
+  /**
+   * 恢复策略实例
+   */
+  resume: (id: string) =>
+    invokeRaw<void>('strategy_engine_resume', { id }),
+
+  /**
    * 列出所有策略实例
    */
   list: () =>
@@ -205,4 +217,69 @@ export const strategyEngineApi = {
    */
   get: (id: string) =>
     invokeRaw<InstanceInfo | null>('strategy_engine_get', { id }),
+};
+
+// ============== Risk API ==============
+import type { AlertFilter, RiskAlertHistory } from '@/types';
+
+export const riskApi = {
+  /**
+   * 获取风险概览
+   */
+  getOverview: () =>
+    invoke<any>('get_risk_overview'),
+
+  /**
+   * 获取活跃预警
+   */
+  getActiveAlerts: () =>
+    invoke<any[]>('get_active_alerts'),
+
+  /**
+   * 处理预警
+   */
+  handleAlert: (alertId: string) =>
+    invoke('handle_alert', { alert_id: alertId }),
+
+  /**
+   * 忽略预警
+   */
+  ignoreAlert: (alertId: string) =>
+    invoke('ignore_alert', { alert_id: alertId }),
+
+  /**
+   * 获取风险规则配置
+   */
+  getRiskRules: () =>
+    invoke<any[]>('get_risk_rules'),
+
+  /**
+   * 更新风险规则
+   */
+  updateRiskRule: (ruleName: string, config: any) =>
+    invoke('update_risk_rule', { rule_name: ruleName, config }),
+
+  /**
+   * 获取预警历史
+   */
+  getAlertHistory: (filter: AlertFilter) =>
+    invoke<{ items: any[]; total: number }>('get_alert_history', { filter }),
+
+  /**
+   * 获取预警详情
+   */
+  getAlertDetail: (id: string) =>
+    invoke<RiskAlertHistory>('get_alert_detail', { id }),
+
+  /**
+   * 添加预警备注
+   */
+  addAlertNote: (id: string, note: string) =>
+    invoke('add_alert_note', { id, note }),
+
+  /**
+   * 删除预警
+   */
+  deleteAlert: (id: string) =>
+    invoke('delete_alert', { id }),
 };

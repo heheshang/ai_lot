@@ -1,5 +1,64 @@
 use serde::{Deserialize, Serialize};
 
+/// Order state enum representing the lifecycle of an order
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OrderState {
+    /// Order has been created but not yet submitted to exchange
+    Pending,
+    /// Order is active on the exchange
+    Open,
+    /// Order has been partially filled
+    PartiallyFilled,
+    /// Order has been completely filled
+    Filled,
+    /// Order has been canceled
+    Canceled,
+    /// Order has been rejected by the exchange
+    Rejected,
+}
+
+impl OrderState {
+    /// Returns true if the order is in a terminal state
+    pub fn is_terminal(&self) -> bool {
+        matches!(self, Self::Filled | Self::Canceled | Self::Rejected)
+    }
+
+    /// Returns true if the order is active
+    pub fn is_active(&self) -> bool {
+        matches!(self, Self::Open | Self::PartiallyFilled)
+    }
+}
+
+impl std::fmt::Display for OrderState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pending => write!(f, "pending"),
+            Self::Open => write!(f, "open"),
+            Self::PartiallyFilled => write!(f, "partially_filled"),
+            Self::Filled => write!(f, "filled"),
+            Self::Canceled => write!(f, "canceled"),
+            Self::Rejected => write!(f, "rejected"),
+        }
+    }
+}
+
+impl std::str::FromStr for OrderState {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "pending" => Ok(Self::Pending),
+            "open" => Ok(Self::Open),
+            "partially_filled" => Ok(Self::PartiallyFilled),
+            "filled" => Ok(Self::Filled),
+            "canceled" => Ok(Self::Canceled),
+            "rejected" => Ok(Self::Rejected),
+            _ => anyhow::bail!("Invalid order state: {}", s),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Ticker {
@@ -61,20 +120,137 @@ pub struct Order {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_order_id: Option<String>,
     pub symbol: String,
-    pub side: String,
+    pub side: OrderSide,
     #[serde(rename = "type")]
-    pub order_type: String,
+    pub order_type: OrderType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub price: Option<f64>,
     pub quantity: f64,
     pub filled_quantity: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avg_price: Option<f64>,
-    pub status: String,
+    pub status: OrderState,
     pub commission: f64,
     pub created_at: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filled_at: Option<i64>,
+}
+
+/// Order type enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OrderType {
+    Market,
+    Limit,
+    StopLoss,
+    StopLimit,
+    OCO,
+}
+
+impl std::fmt::Display for OrderType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Market => write!(f, "market"),
+            Self::Limit => write!(f, "limit"),
+            Self::StopLoss => write!(f, "stop_loss"),
+            Self::StopLimit => write!(f, "stop_limit"),
+            Self::OCO => write!(f, "oco"),
+        }
+    }
+}
+
+impl std::str::FromStr for OrderType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "market" => Ok(Self::Market),
+            "limit" => Ok(Self::Limit),
+            "stop_loss" | "stop-loss" => Ok(Self::StopLoss),
+            "stop_limit" | "stop-limit" => Ok(Self::StopLimit),
+            "oco" => Ok(Self::OCO),
+            _ => anyhow::bail!("Invalid order type: {}", s),
+        }
+    }
+}
+
+/// Order side enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OrderSide {
+    Buy,
+    Sell,
+}
+
+impl std::fmt::Display for OrderSide {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Buy => write!(f, "buy"),
+            Self::Sell => write!(f, "sell"),
+        }
+    }
+}
+
+impl std::str::FromStr for OrderSide {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "buy" | "bid" | "long" => Ok(Self::Buy),
+            "sell" | "ask" | "short" => Ok(Self::Sell),
+            _ => anyhow::bail!("Invalid order side: {}", s),
+        }
+    }
+}
+
+/// Order request for placing a new order
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderRequest {
+    pub symbol: String,
+    pub side: OrderSide,
+    pub order_type: OrderType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub price: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stop_price: Option<f64>,
+    pub quantity: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_order_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_in_force: Option<TimeInForce>,
+}
+
+/// Time in force for orders
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum TimeInForce {
+    GTC,  // Good Till Cancel
+    IOC,  // Immediate or Cancel
+    FOK,  // Fill or Kill
+}
+
+impl std::fmt::Display for TimeInForce {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::GTC => write!(f, "GTC"),
+            Self::IOC => write!(f, "IOC"),
+            Self::FOK => write!(f, "FOK"),
+        }
+    }
+}
+
+impl std::str::FromStr for TimeInForce {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "GTC" => Ok(Self::GTC),
+            "IOC" => Ok(Self::IOC),
+            "FOK" => Ok(Self::FOK),
+            _ => anyhow::bail!("Invalid time in force: {}", s),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
