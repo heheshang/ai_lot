@@ -19,6 +19,7 @@ const RiskDashboard = () => import('@/views/Risk/Dashboard.vue');
 const RuleConfig = () => import('@/views/Risk/RuleConfig.vue');
 const AlertHistory = () => import('@/views/Risk/AlertHistory.vue');
 const Settings = () => import('@/views/settings/Settings.vue');
+const Exchange = () => import('@/views/settings/Exchange.vue');
 
 const routes: RouteRecordRaw[] = [
   {
@@ -37,61 +38,79 @@ const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'Dashboard',
         component: Dashboard,
+        meta: { title: '仪表盘' },
       },
       {
         path: 'market',
         name: 'Market',
         component: MarketView,
+        meta: { title: '行情' },
       },
       {
         path: 'strategy',
         name: 'StrategyList',
         component: StrategyList,
+        meta: { title: '策略列表' },
       },
       {
         path: 'strategy/editor/:id?',
         name: 'StrategyEditor',
         component: StrategyEditor,
+        meta: { title: '策略编辑器' },
       },
       {
         path: 'strategy/instances',
         name: 'StrategyInstances',
         component: StrategyInstances,
+        meta: { title: '运行实例' },
       },
       {
         path: 'backtest',
         name: 'Backtest',
         component: BacktestView,
+        meta: { title: '回测' },
       },
       {
         path: 'trade',
         name: 'Trade',
         component: TradeConsole,
+        meta: { title: '交易控制台' },
       },
       {
         path: 'risk',
         name: 'Risk',
         component: RiskMonitor,
+        meta: { title: '风险监控' },
       },
       {
         path: 'risk/dashboard',
         name: 'RiskDashboard',
         component: RiskDashboard,
+        meta: { title: '风险概览' },
       },
       {
         path: 'risk/rules',
         name: 'RuleConfig',
         component: RuleConfig,
+        meta: { title: '规则配置' },
       },
       {
         path: 'risk/alerts',
         name: 'AlertHistory',
         component: AlertHistory,
+        meta: { title: '告警历史' },
       },
       {
         path: 'settings',
         name: 'Settings',
         component: Settings,
+        meta: { title: '系统设置' },
+      },
+      {
+        path: 'settings/exchange',
+        name: 'Exchange',
+        component: Exchange,
+        meta: { title: '交易所设置' },
       },
     ],
   },
@@ -128,24 +147,9 @@ router.beforeEach(async (to, _from, next) => {
     return;
   }
 
-  // 有 token 但没有用户信息，尝试恢复用户状态
-  if (!userStore.user) {
-    try {
-      await userStore.restoreUser();
-      // 恢复成功，继续导航
-      next();
-    } catch (error) {
-      // 恢复失败，清除无效 token 并跳转到登录页
-      localStorage.removeItem('token');
-      next({
-        name: 'Login',
-        query: { redirect: to.fullPath }
-      });
-    }
-  } else {
-    // 已登录用户，正常导航
-    next();
-  }
+  // 有 token 就放行，不需要额外检查 user 状态
+  // user 状态会在登录时设置，如果刷新页面会由 App.vue 初始化
+  next();
 });
 
 export default router;

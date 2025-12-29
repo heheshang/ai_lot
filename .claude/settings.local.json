@@ -40,7 +40,8 @@
       "Bash(npm run lint:*)",
       "Bash(cargo clippy:*)",
       "Bash(ls:*)",
-      "mcp__morphllm-fast-apply__edit_file"
+      "mcp__morphllm-fast-apply__edit_file",
+      "mcp__web-reader__webReader"
     ]
   },
   "enabledPlugins": {

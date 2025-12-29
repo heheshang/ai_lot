@@ -1,5 +1,6 @@
 use crate::core::trade::types::*;
 use crate::core::Signal;
+use crate::core::strategy::indicators::IndicatorCalculator;
 use anyhow::Result;
 use rquickjs::{Context, Runtime};
 use std::collections::HashMap;
@@ -125,6 +126,51 @@ impl ScriptExecutor {
         // 准备存储数据
         let storage_data = self.prepare_storage_js();
 
+        // 准备历史数据并计算指标
+        let mut all_history = history.to_vec();
+        all_history.push(kline.clone());
+
+        let indicator_calculator = IndicatorCalculator::new(all_history);
+
+        // 计算常用指标
+        let sma_20 = indicator_calculator.sma(20);
+        let ema_12 = indicator_calculator.ema(12);
+        let ema_26 = indicator_calculator.ema(26);
+        let rsi_14 = indicator_calculator.rsi(14);
+        let macd = indicator_calculator.macd(12, 26, 9);
+        let bb = indicator_calculator.bollinger_bands(20, 2.0);
+        let atr_14 = indicator_calculator.atr(14);
+
+        // 转换指标数据为 JSON
+        let indicators_json = format!(
+            r#"{{
+                sma: {},
+                ema: {},
+                rsi: {},
+                macd: {{
+                    macd: {},
+                    signal: {},
+                    histogram: {}
+                }},
+                bollingerBands: {{
+                    upper: {},
+                    middle: {},
+                    lower: {}
+                }},
+                atr: {}
+            }}"#,
+            vec_to_json(&sma_20),
+            vec_to_json(&ema_12),
+            vec_to_json(&rsi_14),
+            vec_to_json(&macd.macd),
+            vec_to_json(&macd.signal),
+            vec_to_json(&macd.histogram),
+            vec_to_json(&bb.upper),
+            vec_to_json(&bb.middle),
+            vec_to_json(&bb.lower),
+            vec_to_json(&atr_14)
+        );
+
         // 准备历史数据
         let history_json = serde_json::to_string(history)?;
         let history_json_safe = history_json.replace('\\', "\\\\").replace('"', "'");
@@ -152,8 +198,48 @@ impl ScriptExecutor {
                     const storageData = {};
                     const historyData = {};
 
+                    // 技术指标数据
+                    const indicatorsData = {};
+
                     const context = {{
                         parameters: params,
+                        indicators: {{
+                            // 趋势指标
+                            sma: (period) => {{
+                                if (period === 20) return indicatorsData.sma;
+                                // TODO: 支持动态周期
+                                return null;
+                            }},
+                            ema: (period) => {{
+                                if (period === 12) return indicatorsData.ema;
+                                return null;
+                            }},
+
+                            // 动量指标
+                            rsi: (period) => {{
+                                if (period === 14) return indicatorsData.rsi;
+                                return null;
+                            }},
+                            macd: () => indicatorsData.macd,
+
+                            // 波动率指标
+                            bollingerBands: () => indicatorsData.bollingerBands,
+                            atr: (period) => {{
+                                if (period === 14) return indicatorsData.atr;
+                                return null;
+                            }},
+
+                            // 获取最新值
+                            latest: (arr) => {{
+                                if (!Array.isArray(arr)) return null;
+                                for (let i = arr.length - 1; i >= 0; i--) {{
+                                    if (arr[i] !== null && arr[i] !== undefined) {{
+                                        return arr[i];
+                                    }}
+                                }}
+                                return null;
+                            }}
+                        }},
                         storage: {{
                             _data: storageData,
                             set: function(k, v) {{
@@ -206,7 +292,8 @@ impl ScriptExecutor {
                 kline.close,
                 kline.volume,
                 storage_data,
-                history_json_safe
+                history_json_safe,
+                indicators_json
             );
 
             // 执行并获取结果
@@ -275,6 +362,18 @@ impl Default for ScriptExecutor {
     fn default() -> Self {
         Self::new().expect("Failed to create ScriptExecutor")
     }
+}
+
+/// 辅助函数：将 Vec<Option<f64>> 转换为 JavaScript 兼容的 JSON 格式
+fn vec_to_json(values: &[Option<f64>]) -> String {
+    let formatted: Vec<String> = values
+        .iter()
+        .map(|v| match v {
+            Some(val) => val.to_string(),
+            None => "null".to_string(),
+        })
+        .collect();
+    format!("[{}]", formatted.join(", "))
 }
 
 #[cfg(test)]

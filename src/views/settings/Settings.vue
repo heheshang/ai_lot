@@ -14,180 +14,137 @@
         label-position="left"
         class="settings-form"
       >
-        <!-- 应用设置 -->
+        <!-- 主题与语言 -->
         <div class="section">
           <div class="section-title">
             <el-icon><Setting /></el-icon>
-            <span>应用设置</span>
+            <span>界面设置</span>
           </div>
 
-          <el-form-item label="语言" prop="app.language">
-            <el-select v-model="formData.app.language" placeholder="请选择语言">
-              <el-option label="简体中文" value="zh-CN" />
-              <el-option label="English" value="en-US" />
-            </el-select>
-          </el-form-item>
-
-          <el-form-item label="主题" prop="app.theme">
-            <el-select v-model="formData.app.theme" placeholder="请选择主题">
+          <el-form-item label="主题" prop="theme">
+            <el-select v-model="formData.theme" placeholder="请选择主题">
               <el-option label="浅色" value="light" />
               <el-option label="深色" value="dark" />
               <el-option label="跟随系统" value="auto" />
             </el-select>
           </el-form-item>
 
-          <el-form-item label="自动保存间隔" prop="app.auto_save_interval">
-            <el-input-number
-              v-model="formData.app.auto_save_interval"
-              :min="10"
-              :max="3600"
-              :step="10"
-              controls-position="right"
-            />
-            <span class="unit">秒</span>
+          <el-form-item label="语言" prop="language">
+            <el-select v-model="formData.language" placeholder="请选择语言">
+              <el-option label="简体中文" value="zh-CN" />
+              <el-option label="English" value="en-US" />
+            </el-select>
           </el-form-item>
-        </div>
 
-        <el-divider />
-
-        <!-- 数据库配置 -->
-        <div class="section">
-          <div class="section-title">
-            <el-icon><DataBoard /></el-icon>
-            <span>数据库配置</span>
-          </div>
-
-          <el-form-item label="数据库路径" prop="database.path">
+          <el-form-item label="时区" prop="timezone">
             <el-input
-              v-model="formData.database.path"
-              placeholder="ai-lot.db"
-              :disabled="true"
-            >
-              <template #append>
-                <el-icon><InfoFilled /></el-icon>
-              </template>
-            </el-input>
-            <div class="form-tip">数据库文件存储在应用数据目录中</div>
-          </el-form-item>
-
-          <el-form-item label="备份间隔" prop="database.backup_interval_hours">
-            <el-input-number
-              v-model="formData.database.backup_interval_hours"
-              :min="1"
-              :max="168"
-              :step="1"
-              controls-position="right"
+              v-model="formData.timezone"
+              placeholder="Asia/Shanghai"
+              clearable
             />
-            <span class="unit">小时</span>
-          </el-form-item>
-
-          <el-form-item label="备份保留天数" prop="database.backup_retention_days">
-            <el-input-number
-              v-model="formData.database.backup_retention_days"
-              :min="1"
-              :max="365"
-              :step="1"
-              controls-position="right"
-            />
-            <span class="unit">天</span>
+            <div class="form-tip">IANA 时区标识符，如 Asia/Shanghai</div>
           </el-form-item>
         </div>
 
         <el-divider />
 
-        <!-- 风控配置 -->
+        <!-- 通知设置 -->
         <div class="section">
           <div class="section-title">
-            <el-icon><Shield /></el-icon>
-            <span>风控配置</span>
+            <el-icon><Bell /></el-icon>
+            <span>通知设置</span>
           </div>
 
-          <el-form-item label="启用风控" prop="risk.enabled">
+          <el-form-item label="启用通知" prop="notifications.enabled">
             <el-switch
-              v-model="formData.risk.enabled"
+              v-model="formData.notifications.enabled"
               active-text="已启用"
               inactive-text="未启用"
             />
           </el-form-item>
 
-          <el-form-item label="默认风控动作" prop="risk.default_action">
-            <el-select v-model="formData.risk.default_action" placeholder="请选择默认动作">
-              <el-option label="仅告警" value="alert" />
-              <el-option label="平仓" value="close_position" />
-              <el-option label="停止策略" value="stop_strategy" />
-            </el-select>
-            <div class="form-tip">触发风控规则时的默认处理方式</div>
+          <el-form-item label="通知方式" prop="notifications.methods">
+            <el-checkbox-group v-model="formData.notifications.methods">
+              <el-checkbox label="log">日志</el-checkbox>
+              <el-checkbox label="dingtalk">钉钉</el-checkbox>
+              <el-checkbox label="email">邮件</el-checkbox>
+            </el-checkbox-group>
           </el-form-item>
         </div>
 
         <el-divider />
 
-        <!-- 通知配置 -->
+        <!-- 交易设置 -->
         <div class="section">
           <div class="section-title">
-            <el-icon><Bell /></el-icon>
-            <span>通知配置</span>
+            <el-icon><DataBoard /></el-icon>
+            <span>交易设置</span>
           </div>
 
-          <!-- 钉钉通知 -->
-          <el-form-item label="钉钉 Webhook" prop="notifications.dingtalk_webhook">
-            <el-input
-              v-model="formData.notifications.dingtalk_webhook"
-              placeholder="https://oapi.dingtalk.com/robot/send?access_token=xxx"
-              type="password"
-              show-password
-              clearable
-            />
-            <div class="form-tip">留空则不启用钉钉通知</div>
-          </el-form-item>
-
-          <!-- 邮件通知 -->
-          <el-form-item label="SMTP 服务器" prop="notifications.smtp_server">
-            <el-input
-              v-model="formData.notifications.smtp_server"
-              placeholder="smtp.example.com"
-              clearable
-            />
-          </el-form-item>
-
-          <el-form-item label="SMTP 端口" prop="notifications.smtp_port">
+          <el-form-item label="最大持仓数" prop="trading.max_positions">
             <el-input-number
-              v-model="formData.notifications.smtp_port"
+              v-model="formData.trading.max_positions"
               :min="1"
-              :max="65535"
+              :max="100"
               :step="1"
               controls-position="right"
-              placeholder="587"
             />
+            <div class="form-tip">同时持有的最大仓位数量</div>
           </el-form-item>
 
-          <el-form-item label="SMTP 用户名" prop="notifications.smtp_username">
-            <el-input
-              v-model="formData.notifications.smtp_username"
-              placeholder="user@example.com"
-              clearable
+          <el-form-item label="最大持仓比例" prop="trading.max_position_ratio">
+            <el-input-number
+              v-model="formData.trading.max_position_ratio"
+              :min="0.01"
+              :max="1"
+              :step="0.01"
+              controls-position="right"
             />
+            <div class="form-tip">单个仓位占账户净值的最大比例</div>
           </el-form-item>
 
-          <el-form-item label="SMTP 密码" prop="notifications.smtp_password">
-            <el-input
-              v-model="formData.notifications.smtp_password"
-              type="password"
-              show-password
-              placeholder="请输入SMTP密码"
-              clearable
+          <el-form-item label="默认杠杆" prop="trading.default_leverage">
+            <el-input-number
+              v-model="formData.trading.default_leverage"
+              :min="1"
+              :max="125"
+              :step="1"
+              controls-position="right"
             />
+            <div class="form-tip">新开仓位的默认杠杆倍数</div>
+          </el-form-item>
+        </div>
+
+        <el-divider />
+
+        <!-- 风控设置 -->
+        <div class="section">
+          <div class="section-title">
+            <el-icon><DataBoard /></el-icon>
+            <span>风控设置</span>
+          </div>
+
+          <el-form-item label="每日亏损限制" prop="risk.daily_loss_limit">
+            <el-input-number
+              v-model="formData.risk.daily_loss_limit"
+              :min="0"
+              :step="100"
+              controls-position="right"
+            />
+            <span class="unit">USDT</span>
+            <div class="form-tip">单日最大允许亏损金额</div>
           </el-form-item>
 
-          <el-form-item label="通知邮箱" prop="notifications.notification_emails">
-            <el-input
-              v-model="formData.notifications.notification_emails"
-              type="textarea"
-              :rows="2"
-              placeholder="email1@example.com, email2@example.com"
-              clearable
+          <el-form-item label="最大回撤比例" prop="risk.max_drawdown_percent">
+            <el-input-number
+              v-model="formData.risk.max_drawdown_percent"
+              :min="1"
+              :max="100"
+              :step="1"
+              controls-position="right"
             />
-            <div class="form-tip">多个邮箱用逗号分隔，留空则不启用邮件通知</div>
+            <span class="unit">%</span>
+            <div class="form-tip">触发风控的最大回撤百分比</div>
           </el-form-item>
         </div>
 
@@ -219,14 +176,11 @@ import {
   Setting,
   DataBoard,
   Bell,
-  InfoFilled,
   Check,
   RefreshLeft,
   Refresh,
 } from '@element-plus/icons-vue';
-import { invoke } from '@tauri-apps/api/core';
-import type { AppConfig } from '@/types/config';
-import { validateConfig } from '@/types/config';
+import { configApi, type SystemConfig } from '@/api/tauri';
 
 const router = useRouter();
 const formRef = ref<FormInstance>();
@@ -235,28 +189,22 @@ const saving = ref(false);
 const resetting = ref(false);
 
 // 表单数据
-const formData = reactive<AppConfig>({
-  app: {
-    language: 'zh-CN',
-    theme: 'dark',
-    auto_save_interval: 60,
+const formData = reactive<SystemConfig>({
+  theme: 'dark',
+  language: 'zh-CN',
+  timezone: 'Asia/Shanghai',
+  notifications: {
+    enabled: true,
+    methods: ['log'],
   },
-  database: {
-    path: 'ai-lot.db',
-    backup_interval_hours: 24,
-    backup_retention_days: 30,
+  trading: {
+    max_positions: 5,
+    max_position_ratio: 0.2,
+    default_leverage: 1,
   },
   risk: {
-    enabled: true,
-    default_action: 'alert',
-  },
-  notifications: {
-    dingtalk_webhook: '',
-    smtp_server: '',
-    smtp_port: undefined,
-    smtp_username: '',
-    smtp_password: '',
-    notification_emails: '',
+    daily_loss_limit: 1000,
+    max_drawdown_percent: 20,
   },
 });
 
@@ -269,7 +217,7 @@ const goBack = () => {
 const loadConfig = async () => {
   loading.value = true;
   try {
-    const config = await invoke<AppConfig>('config_get');
+    const config = await configApi.get();
     Object.assign(formData, config);
     ElMessage.success('配置加载成功');
   } catch (error) {
@@ -281,26 +229,9 @@ const loadConfig = async () => {
 
 // 保存配置
 const handleSave = async () => {
-  // 验证配置
-  const errors: string[] = [];
-  errors.push(...validateConfig('app', formData.app));
-  errors.push(...validateConfig('database', formData.database));
-  errors.push(...validateConfig('risk', formData.risk));
-  errors.push(...validateConfig('notifications', formData.notifications));
-
-  if (errors.length > 0) {
-    ElMessage.error({
-      message: `配置验证失败:\n${errors.join('\n')}`,
-      duration: 5000,
-    });
-    return;
-  }
-
   saving.value = true;
   try {
-    const result = await invoke<AppConfig>('config_update', {
-      updater: formData,
-    });
+    const result = await configApi.update(formData);
     Object.assign(formData, result);
     ElMessage.success('配置保存成功');
   } catch (error) {
@@ -325,7 +256,7 @@ const handleReset = async () => {
 
     resetting.value = true;
     try {
-      const result = await invoke<AppConfig>('config_reset');
+      const result = await configApi.reset();
       Object.assign(formData, result);
       ElMessage.success('配置已重置为默认值');
     } catch (error) {

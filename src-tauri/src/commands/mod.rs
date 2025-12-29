@@ -4,12 +4,14 @@ pub mod strategy;
 pub mod strategy_test;
 pub mod strategy_engine;
 pub mod strategy_instance;
+pub mod strategy_debug;
 pub mod trade;
 pub mod risk;
 pub mod emergency;
 pub mod config;
 pub mod backup;
 pub mod exchange;
+pub mod backtest;
 
 // 只导出命令函数
 pub use market::{
@@ -96,4 +98,22 @@ pub use exchange::{
     exchange_get,
     exchange_delete,
     exchange_update_status,
+};
+pub use strategy_debug::{
+    get_strategy_logs,
+    get_strategy_metrics,
+    get_strategy_variables,
+    clear_strategy_logs,
+    set_strategy_log_level,
+    get_strategy_log_level,
+    generate_test_logs,
+};
+pub use backtest::{
+    backtest_create_job,
+    backtest_get_job,
+    backtest_list_jobs,
+    backtest_run_job,
+    backtest_run,
+    backtest_delete_job,
+    backtest_get_result,
 };

@@ -1,5 +1,6 @@
 use crate::core::trade::exchange::{Exchange, ExchangeName, binance::BinanceExchange};
 use crate::core::trade::types::*;
+use crate::core::trade::converter::{MarketDataConverter, ConverterFactory};
 use crate::core::event::EventBus;
 use crate::infrastructure::Database;
 use crate::infrastructure::cache::{get_klines, insert_klines};
@@ -301,6 +302,74 @@ impl MarketService {
 
         log::info!("MarketService shutdown complete");
         Ok(())
+    }
+
+    /// Get the converter for a specific exchange
+    pub fn get_converter(&self, exchange_name: ExchangeName) -> Box<dyn MarketDataConverter> {
+        ConverterFactory::create(exchange_name)
+    }
+
+    /// Normalize symbol to internal format using the exchange's converter
+    pub fn normalize_symbol(&self, symbol: &str, exchange_name: ExchangeName) -> String {
+        let converter = self.get_converter(exchange_name);
+        converter.normalize_symbol(symbol)
+    }
+
+    /// Denormalize symbol from internal format to exchange format
+    pub fn denormalize_symbol(&self, symbol: &str, exchange_name: ExchangeName) -> String {
+        let converter = self.get_converter(exchange_name);
+        converter.denormalize_symbol(symbol)
+    }
+
+    /// Convert raw ticker data using the appropriate converter
+    pub fn convert_ticker(
+        &self,
+        raw: &serde_json::Value,
+        exchange_name: ExchangeName,
+    ) -> Result<Ticker, crate::core::trade::converter::ConversionError> {
+        let converter = self.get_converter(exchange_name);
+        converter.convert_ticker(raw)
+    }
+
+    /// Convert raw kline data using the appropriate converter
+    pub fn convert_kline(
+        &self,
+        raw: &serde_json::Value,
+        interval: Interval,
+        exchange_name: ExchangeName,
+    ) -> Result<Kline, crate::core::trade::converter::ConversionError> {
+        let converter = self.get_converter(exchange_name);
+        converter.convert_kline(raw, interval)
+    }
+
+    /// Convert raw order data using the appropriate converter
+    pub fn convert_order(
+        &self,
+        raw: &serde_json::Value,
+        exchange_name: ExchangeName,
+    ) -> Result<Order, crate::core::trade::converter::ConversionError> {
+        let converter = self.get_converter(exchange_name);
+        converter.convert_order(raw)
+    }
+
+    /// Convert raw balance data using the appropriate converter
+    pub fn convert_balance(
+        &self,
+        raw: &serde_json::Value,
+        exchange_name: ExchangeName,
+    ) -> Result<Vec<Balance>, crate::core::trade::converter::ConversionError> {
+        let converter = self.get_converter(exchange_name);
+        converter.convert_balance(raw)
+    }
+
+    /// Convert raw position data using the appropriate converter
+    pub fn convert_position(
+        &self,
+        raw: &serde_json::Value,
+        exchange_name: ExchangeName,
+    ) -> Result<Vec<Position>, crate::core::trade::converter::ConversionError> {
+        let converter = self.get_converter(exchange_name);
+        converter.convert_position(raw)
     }
 }
 

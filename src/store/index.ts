@@ -9,3 +9,4 @@ export * from './modules/user';
 export * from './modules/market';
 export * from './modules/strategy';
 export * from './modules/trade';
+export * from './modules/navigation';

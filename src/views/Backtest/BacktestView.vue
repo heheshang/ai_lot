@@ -36,7 +36,7 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="选择策略">
-              <el-select v-model="backtestConfig.strategyId" placeholder="选择策略" style="width: 100%">
+              <el-select v-model="backtestConfig.strategyId" placeholder="选择策略" style="width: 100%" :loading="loadingStrategies">
                 <el-option
                   v-for="strategy in strategies"
                   :key="strategy.id"
@@ -45,7 +45,8 @@
                 >
                   <div class="strategy-option">
                     <span class="strategy-name">{{ strategy.name }}</span>
-                    <span class="strategy-category">{{ strategy.category }}</span>
+                    <el-tag v-if="strategy.category" size="small" type="info">{{ strategy.category }}</el-tag>
+                    <el-tag v-if="strategy.status" size="small" :type="strategy.status === 'active' ? 'success' : 'info'">{{ strategy.status }}</el-tag>
                   </div>
                 </el-option>
               </el-select>
@@ -503,6 +504,7 @@ import {
   List,
   Download,
 } from '@element-plus/icons-vue';
+import { backtestApi, strategyApi, type BacktestJob, type Strategy } from '@/api/tauri';
 
 // 图表引用
 const equityChartRef = ref<HTMLElement>();
@@ -529,13 +531,24 @@ const backtestConfig = ref({
   stopLossRatio: 5,
 });
 
-// 模拟策略列表
-const strategies = ref([
-  { id: '1', name: '双均线策略', category: '趋势' },
-  { id: '2', name: '网格交易策略', category: '均值回归' },
-  { id: '3', name: 'MACD策略', category: '趋势' },
-  { id: '4', name: '布林带策略', category: '均值回归' },
-]);
+// 策略列表
+const strategies = ref<Strategy[]>([]);
+const loadingStrategies = ref(false);
+
+// 加载策略列表
+async function loadStrategies() {
+  loadingStrategies.value = true;
+  try {
+    // 使用默认用户 ID，实际应用中应该从用户状态获取
+    const userId = 'default';
+    const result = await strategyApi.list(userId);
+    strategies.value = result;
+  } catch (error) {
+    ElMessage.error(`加载策略列表失败: ${error}`);
+  } finally {
+    loadingStrategies.value = false;
+  }
+}
 
 // 回测结果
 interface Trade {
@@ -642,25 +655,74 @@ async function runBacktest() {
   progressPercent.value = 0;
   processedBars.value = 0;
 
-  // 模拟回测进度
-  const totalBars = 1000;
-  const interval = setInterval(() => {
-    processedBars.value += Math.floor(Math.random() * 50) + 20;
-    const percent = Math.min((processedBars.value / totalBars) * 100, 100);
-    progressPercent.value = Math.floor(percent);
+  try {
+    // 构建回测配置
+    const config = {
+      strategy_id: backtestConfig.value.strategyId,
+      symbol: backtestConfig.value.symbol,
+      timeframe: backtestConfig.value.interval,
+      start_time: Math.floor(backtestConfig.value.dateRange[0].getTime() / 1000),
+      end_time: Math.floor(backtestConfig.value.dateRange[1].getTime() / 1000),
+      initial_capital: backtestConfig.value.initialCapital,
+      commission_rate: backtestConfig.value.feeRate / 100,
+      slippage: backtestConfig.value.slippage / 100,
+      max_positions: backtestConfig.value.maxPositions,
+      max_position_ratio: backtestConfig.value.maxPositionRatio / 100,
+      stop_loss_ratio: backtestConfig.value.stopLossRatio / 100,
+    };
 
-    const remaining = totalBars - processedBars.value;
-    estimatedTime.value = `${Math.ceil(remaining / 30)}秒`;
+    // 直接运行回测
+    const result = await backtestApi.run(config);
 
-    if (percent >= 100) {
-      clearInterval(interval);
-      setTimeout(() => {
-        isRunning.value = false;
-        generateMockResult();
-        ElMessage.success('回测完成');
-      }, 500);
+    // 转换结果格式
+    if (result) {
+      backtestResult.value = {
+        initialCapital: config.initial_capital,
+        finalCapital: result.final_capital || config.initial_capital,
+        profit: result.profit || 0,
+        totalReturn: result.total_return || 0,
+        maxDrawdown: result.max_drawdown || 0,
+        sharpeRatio: result.sharpe_ratio || 0,
+        totalTrades: result.total_trades || 0,
+        winningTrades: result.winning_trades || 0,
+        losingTrades: result.losing_trades || 0,
+        winRate: result.win_rate || 0,
+        avgWin: result.avg_win || 0,
+        avgLoss: result.avg_loss || 0,
+        profitFactor: result.profit_factor || 0,
+        expectedValue: result.expected_value || 0,
+        maxConsecutiveWins: result.max_consecutive_wins || 0,
+        maxConsecutiveLosses: result.max_consecutive_losses || 0,
+        maxSingleWin: result.max_single_win || 0,
+        maxSingleLoss: result.max_single_loss || 0,
+        peakCapital: result.peak_capital || config.initial_capital,
+        troughCapital: result.trough_capital || config.initial_capital,
+        avgCapitalUtilization: result.avg_capital_utilization || 0,
+        equityCurve: result.equity_curve || [],
+        drawdownCurve: result.drawdown_curve || [],
+        trades: (result.trades || []).map((t: any, i: number) => ({
+          id: i + 1,
+          time: new Date(t.time || Date.now()),
+          side: t.side || 'buy',
+          price: t.price || 0,
+          amount: t.amount || 0,
+          value: t.value || 0,
+          fee: t.fee || 0,
+          pnl: t.pnl || null,
+          balance: t.balance || 0,
+        })),
+      };
     }
-  }, 200);
+
+    ElMessage.success('回测完成');
+  } catch (error) {
+    ElMessage.error(`回测失败: ${error}`);
+  } finally {
+    isRunning.value = false;
+    nextTick(() => {
+      renderChart();
+    });
+  }
 }
 
 function generateMockResult() {
@@ -891,12 +953,15 @@ watch(chartType, () => {
 });
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   // 设置默认日期范围（最近一个月）
   const end = new Date();
   const start = new Date();
   start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
   backtestConfig.value.dateRange = [start, end];
+
+  // 加载策略列表
+  await loadStrategies();
 });
 
 onUnmounted(() => {

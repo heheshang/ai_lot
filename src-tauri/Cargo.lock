@@ -82,6 +82,7 @@ dependencies = [
  "lettre",
  "log",
  "moka",
+ "rand 0.8.5",
  "reqwest",
  "rquickjs",
  "serde",

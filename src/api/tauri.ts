@@ -5,12 +5,10 @@ import type {
   User,
   Kline,
   Strategy,
-  BacktestParams,
-  BacktestReport,
-  Order,
-  Position,
   StrategyConfig,
   InstanceInfo,
+  Order,
+  Position,
 } from '@/types';
 
 /**
@@ -57,12 +55,6 @@ export const userApi = {
    */
   getCurrentUser: (userId: string) =>
     invokeRaw<User>('get_current_user', { user_id: userId }),
-
-  /**
-   * 用户登出
-   */
-  logout: () =>
-    invoke('user_logout'),
 };
 
 // ============== 行情 API ==============
@@ -138,49 +130,7 @@ export const strategyApi = {
     invokeRaw('strategy_delete', { id }),
 };
 
-// ============== 回测 API ==============
-export const backtestApi = {
-  /**
-   * 运行回测
-   */
-  run: (params: BacktestParams) =>
-    invoke<string>('backtest_run', { params }),
-
-  /**
-   * 获取回测报告
-   */
-  getReport: (id: string) =>
-    invoke<BacktestReport>('backtest_get_report', { id }),
-};
-
-// ============== 交易 API ==============
-export const tradeApi = {
-  /**
-   * 下单
-   */
-  placeOrder: (order: any) =>
-    invoke<Order>('trade_place_order', { order }),
-
-  /**
-   * 撤单
-   */
-  cancelOrder: (orderId: string) =>
-    invoke('trade_cancel_order', { orderId }),
-
-  /**
-   * 获取持仓
-   */
-  getPositions: () =>
-    invoke<Position[]>('trade_get_positions'),
-
-  /**
-   * 获取订单
-   */
-  getOrders: () =>
-    invoke<Order[]>('trade_get_orders'),
-};
-
-// ============== StrategyEngine API ==============
+// ============== Strategy Engine API ==============
 export const strategyEngineApi = {
   /**
    * 启动策略实例
@@ -217,6 +167,278 @@ export const strategyEngineApi = {
    */
   get: (id: string) =>
     invokeRaw<InstanceInfo | null>('strategy_engine_get', { id }),
+};
+
+// ============== Strategy Instance API ==============
+export const strategyInstanceApi = {
+  /**
+   * 列出策略实例
+   */
+  list: (userId?: string) =>
+    invokeRaw<InstanceInfo[]>('instance_list', { user_id: userId }),
+
+  /**
+   * 获取策略实例
+   */
+  get: (instanceId: string) =>
+    invokeRaw<InstanceInfo>('instance_get', { instance_id: instanceId }),
+
+  /**
+   * 创建策略实例
+   */
+  create: (config: StrategyConfig) =>
+    invokeRaw<string>('instance_create', { config }),
+
+  /**
+   * 更新策略实例状态
+   */
+  updateStatus: (instanceId: string, status: 'running' | 'paused' | 'stopped' | 'error') =>
+    invokeRaw<void>('instance_update_status', { instance_id: instanceId, status }),
+
+  /**
+   * 更新策略实例统计
+   */
+  updateStats: (instanceId: string, stats: any) =>
+    invokeRaw<void>('instance_update_stats', { instance_id: instanceId, stats }),
+
+  /**
+   * 删除策略实例
+   */
+  delete: (instanceId: string) =>
+    invokeRaw<void>('instance_delete', { instance_id: instanceId }),
+
+  /**
+   * 列出运行中的策略实例
+   */
+  listRunning: () =>
+    invokeRaw<InstanceInfo[]>('instance_list_running'),
+
+  /**
+   * 列出所有策略实例
+   */
+  listAll: () =>
+    invokeRaw<InstanceInfo[]>('strategy_instance_list_all'),
+
+  /**
+   * 获取策略实例详情
+   */
+  getInstance: (instanceId: string) =>
+    invokeRaw<InstanceInfo>('strategy_instance_get', { instance_id: instanceId }),
+};
+
+// ============== Strategy Test API ==============
+export const strategyTestApi = {
+  /**
+   * 执行策略测试
+   */
+  execute: (strategyId: string, testData?: any) =>
+    invokeRaw<any>('strategy_test_execute', { strategy_id: strategyId, test_data: testData }),
+
+  /**
+   * 验证策略代码
+   */
+  validateCode: (code: string, language: string) =>
+    invokeRaw<{ valid: boolean; errors?: string[] }>('strategy_validate_code', { code, language }),
+};
+
+// ============== Strategy Debug API ==============
+export interface DebugLog {
+  level: 'debug' | 'info' | 'warn' | 'error';
+  message: string;
+  timestamp: number;
+  line?: number;
+  function?: string;
+  instance_id?: string;
+}
+
+export interface DebugVariable {
+  name: string;
+  value: any;
+  var_type: string;
+  timestamp: number;
+}
+
+export interface PerformanceMetrics {
+  execution_times: Record<string, number[]>;
+  call_counts: Record<string, number>;
+  total_execution_time_ms: number;
+  error_count: number;
+  warning_count: number;
+}
+
+export const strategyDebugApi = {
+  /**
+   * 获取策略日志
+   */
+  getLogs: (instanceId: string, minLevel?: string, since?: number, limit?: number) =>
+    invokeRaw<DebugLog[]>('get_strategy_logs', {
+      instance_id: instanceId,
+      min_level: minLevel,
+      since,
+      limit,
+    }),
+
+  /**
+   * 获取性能指标
+   */
+  getMetrics: (instanceId: string) =>
+    invokeRaw<PerformanceMetrics>('get_strategy_metrics', {
+      instance_id: instanceId,
+    }),
+
+  /**
+   * 获取监控变量
+   */
+  getVariables: (instanceId: string) =>
+    invokeRaw<Record<string, DebugVariable>>('get_strategy_variables', {
+      instance_id: instanceId,
+    }),
+
+  /**
+   * 清除日志
+   */
+  clearLogs: (instanceId: string) =>
+    invoke('clear_strategy_logs', { instance_id: instanceId }),
+
+  /**
+   * 设置日志级别
+   */
+  setLogLevel: (instanceId: string, level: string) =>
+    invoke('set_strategy_log_level', {
+      instance_id: instanceId,
+      level,
+    }),
+
+  /**
+   * 获取日志级别
+   */
+  getLogLevel: (instanceId: string) =>
+    invokeRaw<string>('get_strategy_log_level', {
+      instance_id: instanceId,
+    }),
+
+  /**
+   * 生成测试日志
+   */
+  generateTestLogs: (instanceId: string) =>
+    invoke('generate_test_logs', { instance_id: instanceId }),
+};
+
+// ============== Backtest API ==============
+export interface BacktestJob {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  config: any;
+  result?: any;
+  created_at: number;
+  updated_at: number;
+}
+
+export const backtestApi = {
+  /**
+   * 创建回测任务
+   */
+  createJob: (config: any) =>
+    invokeRaw<string>('backtest_create_job', { config }),
+
+  /**
+   * 获取回测任务
+   */
+  getJob: (jobId: string) =>
+    invokeRaw<BacktestJob>('backtest_get_job', { job_id: jobId }),
+
+  /**
+   * 列出回测任务
+   */
+  listJobs: () =>
+    invokeRaw<BacktestJob[]>('backtest_list_jobs'),
+
+  /**
+   * 运行回测任务
+   */
+  runJob: (jobId: string) =>
+    invokeRaw<any>('backtest_run_job', { job_id: jobId }),
+
+  /**
+   * 快速运行回测
+   */
+  run: (config: any) =>
+    invokeRaw<any>('backtest_run', { config }),
+
+  /**
+   * 删除回测任务
+   */
+  deleteJob: (jobId: string) =>
+    invokeRaw<void>('backtest_delete_job', { job_id: jobId }),
+
+  /**
+   * 获取回测结果
+   */
+  getResult: (jobId: string) =>
+    invokeRaw<any>('backtest_get_result', { job_id: jobId }),
+};
+
+// ============== Trade API ==============
+export const tradeApi = {
+  /**
+   * 下单
+   */
+  placeOrder: (order: any) =>
+    invoke<Order>('trade_place_order', { order }),
+
+  /**
+   * 撤单
+   */
+  cancelOrder: (orderId: string) =>
+    invoke('trade_cancel_order', { order_id: orderId }),
+
+  /**
+   * 获取订单
+   */
+  getOrder: (orderId: string) =>
+    invoke<Order>('trade_get_order', { order_id: orderId }),
+
+  /**
+   * 获取所有订单
+   */
+  getOrders: (symbol?: string, limit?: number) =>
+    invoke<Order[]>('trade_get_orders', { symbol, limit }),
+
+  /**
+   * 获取未成交订单
+   */
+  getOpenOrders: (symbol?: string) =>
+    invoke<Order[]>('trade_get_open_orders', { symbol }),
+
+  /**
+   * 同步订单状态
+   */
+  syncOrderStatus: (orderId?: string) =>
+    invoke<void>('trade_sync_order_status', { order_id: orderId }),
+
+  /**
+   * 获取持仓
+   */
+  getPositions: (symbol?: string) =>
+    invoke<Position[]>('trade_get_positions', { symbol }),
+
+  /**
+   * 获取余额
+   */
+  getBalance: () =>
+    invoke<any>('trade_get_balance'),
+
+  /**
+   * 撤销所有订单
+   */
+  cancelAllOrders: (symbol?: string) =>
+    invoke<number>('trade_cancel_all_orders', { symbol }),
+
+  /**
+   * 平仓
+   */
+  closePosition: (symbol: string, quantity?: number) =>
+    invoke<any>('trade_close_position', { symbol, quantity }),
 };
 
 // ============== Risk API ==============
@@ -282,4 +504,188 @@ export const riskApi = {
    */
   deleteAlert: (id: string) =>
     invoke('delete_alert', { id }),
+};
+
+// ============== Config API ==============
+export interface SystemConfig {
+  theme: 'light' | 'dark' | 'auto';
+  language: string;
+  timezone: string;
+  notifications: {
+    enabled: boolean;
+    methods: string[];
+  };
+  trading: {
+    max_positions: number;
+    max_position_ratio: number;
+    default_leverage: number;
+  };
+  risk: {
+    daily_loss_limit: number;
+    max_drawdown_percent: number;
+  };
+}
+
+export const configApi = {
+  /**
+   * 获取系统配置
+   */
+  get: () =>
+    invokeRaw<SystemConfig>('config_get'),
+
+  /**
+   * 更新系统配置
+   */
+  update: (config: Partial<SystemConfig>) =>
+    invokeRaw<SystemConfig>('config_update', { config }),
+
+  /**
+   * 重置系统配置
+   */
+  reset: () =>
+    invokeRaw<SystemConfig>('config_reset'),
+};
+
+// ============== Exchange API ==============
+export interface ExchangeConfig {
+  id?: string;
+  exchange_name: string;
+  display_name: string;
+  api_key: string;
+  api_secret: string;
+  passphrase?: string;
+  is_testnet: boolean;
+  status?: string;
+  created_at?: number;
+  updated_at?: number;
+  api_key_masked?: string;
+}
+
+export const exchangeApi = {
+  /**
+   * 添加交易所配置
+   */
+  add: (userId: string, config: ExchangeConfig) =>
+    invokeRaw<string>('exchange_add', {
+      user_id: userId,
+      request: {
+        exchange_name: config.exchange_name,
+        display_name: config.display_name,
+        api_key: config.api_key,
+        api_secret: config.api_secret,
+        passphrase: config.passphrase,
+        is_testnet: config.is_testnet,
+      },
+    }),
+
+  /**
+   * 更新交易所配置
+   */
+  update: (configId: string, config: ExchangeConfig) =>
+    invokeRaw<void>('exchange_update', {
+      config_id: configId,
+      request: {
+        exchange_name: config.exchange_name,
+        display_name: config.display_name,
+        api_key: config.api_key,
+        api_secret: config.api_secret,
+        passphrase: config.passphrase,
+        is_testnet: config.is_testnet,
+      },
+    }),
+
+  /**
+   * 列出交易所配置
+   */
+  list: (userId: string) =>
+    invokeRaw<ExchangeConfig[]>('exchange_list', { user_id: userId }),
+
+  /**
+   * 获取交易所配置
+   */
+  get: (configId: string) =>
+    invokeRaw<ExchangeConfig>('exchange_get', { config_id: configId }),
+
+  /**
+   * 删除交易所配置
+   */
+  delete: (configId: string) =>
+    invokeRaw<void>('exchange_delete', { config_id: configId }),
+
+  /**
+   * 更新交易所状态
+   */
+  updateStatus: (configId: string, status: string) =>
+    invokeRaw<void>('exchange_update_status', {
+      config_id: configId,
+      status,
+    }),
+};
+
+// ============== Backup API ==============
+export interface BackupInfo {
+  id: string;
+  name: string;
+  size: number;
+  created_at: number;
+  type: 'manual' | 'auto';
+}
+
+export const backupApi = {
+  /**
+   * 创建备份
+   */
+  create: (name?: string) =>
+    invokeRaw<BackupInfo>('backup_create', { name }),
+
+  /**
+   * 恢复备份
+   */
+  restore: (backupId: string) =>
+    invokeRaw<void>('backup_restore', { backup_id: backupId }),
+
+  /**
+   * 列出备份
+   */
+  list: () =>
+    invokeRaw<BackupInfo[]>('backup_list'),
+
+  /**
+   * 删除备份
+   */
+  delete: (backupId: string) =>
+    invokeRaw<void>('backup_delete', { backup_id: backupId }),
+
+  /**
+   * 清理旧备份
+   */
+  cleanup: (keepCount: number) =>
+    invokeRaw<number>('backup_cleanup', { keep_count: keepCount }),
+
+  /**
+   * 验证备份完整性
+   */
+  verifyIntegrity: (backupId: string) =>
+    invokeRaw<boolean>('backup_verify_integrity', { backup_id: backupId }),
+
+  /**
+   * 启动自动备份
+   */
+  startAuto: (intervalMinutes: number) =>
+    invokeRaw<void>('backup_start_auto', { interval_minutes: intervalMinutes }),
+
+  /**
+   * 停止自动备份
+   */
+  stopAuto: () =>
+    invokeRaw<void>('backup_stop_auto'),
+};
+
+// ============== Emergency API ==============
+export const emergencyApi = {
+  /**
+   * 紧急停止 - 停止所有策略并平仓
+   */
+  stop: () =>
+    invokeRaw<void>('emergency_stop'),
 };

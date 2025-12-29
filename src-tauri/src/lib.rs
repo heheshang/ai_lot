@@ -5,6 +5,7 @@ pub mod infrastructure;
 pub mod models;
 pub mod repository;
 pub mod services;
+pub mod types;
 
 // Test helpers - public but only meant for testing
 pub mod test_helpers;
@@ -35,7 +36,7 @@ pub fn run() {
             log::info!("Database path: {}", db_path.display());
 
             // 创建数据库连接并运行迁移
-            let (db, market_service) = tauri::async_runtime::block_on(async {
+            let (db, market_service, backtest_service) = tauri::async_runtime::block_on(async {
                 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
                 use std::str::FromStr;
 
@@ -73,7 +74,7 @@ pub fn run() {
                 // 创建 MarketService (使用内部的 Database 结构)
                 let market_service = std::sync::Arc::new({
                     use crate::infrastructure::Database;
-                    let ms_db = Database::new_with_pool(pool).await.expect("Failed to create MarketService Database");
+                    let ms_db = Database::new_with_pool(pool.clone()).await.expect("Failed to create MarketService Database");
                     services::MarketService::new(ms_db)
                 });
 
@@ -84,7 +85,14 @@ pub fn run() {
                     log::info!("Binance exchange initialized successfully");
                 }
 
-                (db, market_service)
+                // 创建 BacktestService
+                let backtest_service = std::sync::Arc::new({
+                    use crate::infrastructure::Database;
+                    let bt_db = Database::new_with_pool(pool).await.expect("Failed to create BacktestService Database");
+                    services::BacktestService::new(bt_db)
+                });
+
+                (db, market_service, backtest_service)
             });
 
             // 注册 Database 到 Tauri 状态
@@ -92,6 +100,9 @@ pub fn run() {
 
             // 注册 MarketService 到 Tauri 状态
             app.manage(market_service.clone());
+
+            // 注册 BacktestService 到 Tauri 状态
+            app.manage(backtest_service.clone());
 
             // 启动市场事件转发器 - 将 EventBus 事件转发到前端
             let app_handle = app.handle().clone();
@@ -200,6 +211,22 @@ pub fn run() {
             commands::exchange::exchange_get,
             commands::exchange::exchange_delete,
             commands::exchange::exchange_update_status,
+            // Strategy Debug commands
+            commands::strategy_debug::get_strategy_logs,
+            commands::strategy_debug::get_strategy_metrics,
+            commands::strategy_debug::get_strategy_variables,
+            commands::strategy_debug::clear_strategy_logs,
+            commands::strategy_debug::set_strategy_log_level,
+            commands::strategy_debug::get_strategy_log_level,
+            commands::strategy_debug::generate_test_logs,
+            // Backtest commands
+            commands::backtest::backtest_create_job,
+            commands::backtest::backtest_get_job,
+            commands::backtest::backtest_list_jobs,
+            commands::backtest::backtest_run_job,
+            commands::backtest::backtest_run,
+            commands::backtest::backtest_delete_job,
+            commands::backtest::backtest_get_result,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

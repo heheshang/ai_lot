@@ -10,7 +10,7 @@ export const useUserStore = defineStore('user', () => {
   const loading = ref(false);
 
   // Getters
-  const isLoggedIn = computed(() => !!user.value && !!token.value);
+  const isLoggedIn = computed(() => !!token.value); // 只要有 token 就认为已登录
   const username = computed(() => user.value?.username ?? '');
   const roleName = computed(() => user.value?.roleName ?? '');
   const hasPermission = computed(() => {
@@ -31,6 +31,7 @@ export const useUserStore = defineStore('user', () => {
       user.value = response.user;
       token.value = response.token;
       localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user)); // 同时保存用户信息
       return true;
     } catch (error) {
       console.error('Login failed:', error);
@@ -44,6 +45,7 @@ export const useUserStore = defineStore('user', () => {
     user.value = null;
     token.value = null;
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
   }
 
   async function fetchCurrentUser() {
@@ -55,6 +57,7 @@ export const useUserStore = defineStore('user', () => {
 
       const currentUser = await api.userApi.getCurrentUser(userId);
       user.value = currentUser;
+      localStorage.setItem('user', JSON.stringify(currentUser)); // 更新缓存
     } catch (error) {
       console.error('Fetch user failed:', error);
       logout();
@@ -63,12 +66,18 @@ export const useUserStore = defineStore('user', () => {
 
   function initFromStorage() {
     const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+
     if (storedToken) {
       token.value = storedToken;
-      // 解析用户ID从token (简化实现)
-      const userId = storedToken.split(':')[0];
-      if (userId) {
-        fetchCurrentUser();
+    }
+
+    if (storedUser) {
+      try {
+        user.value = JSON.parse(storedUser);
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+        localStorage.removeItem('user');
       }
     }
   }
@@ -84,16 +93,32 @@ export const useUserStore = defineStore('user', () => {
     }
 
     token.value = storedToken;
-    const userId = storedToken.split(':')[0];
-    if (!userId) {
-      throw new Error('Invalid token format');
+
+    // 尝试从 localStorage 恢复用户信息
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        user.value = JSON.parse(storedUser);
+        return user.value;
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+      }
     }
 
-    // Fetch current user data
-    const currentUser = await api.userApi.getCurrentUser(userId);
-    user.value = currentUser;
+    // 如果没有缓存的用户信息，尝试从服务器获取
+    const userId = storedToken.split(':')[0];
+    if (userId) {
+      try {
+        const currentUser = await api.userApi.getCurrentUser(userId);
+        user.value = currentUser;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+        return currentUser;
+      } catch (error) {
+        throw new Error('Failed to restore user');
+      }
+    }
 
-    return currentUser;
+    throw new Error('Invalid token format');
   }
 
   return {
