@@ -535,7 +535,7 @@ impl StrategyEngine {
     }
 
     /// 启动策略实例
-    pub async fn start_instance(&self, config: StrategyConfig, user_id: String) -> Result<String> {
+    pub async fn start_instance(&self, config: StrategyConfig, user_id: String, exchange_id: Option<String>) -> Result<String> {
         let id = config.id.clone().unwrap_or_else(|| {
             uuid::Uuid::new_v4().to_string()
         });
@@ -553,7 +553,10 @@ impl StrategyEngine {
         let strategy_id = id.clone();
         let name = config.name.clone();
         let parameters = config.parameters.clone();
-        let exchange_id = "default_exchange".to_string();
+        // 使用传入的 exchange_id，如果没有提供则返回错误
+        let exchange_id = exchange_id.ok_or_else(|| {
+            anyhow::anyhow!("exchange_id is required but not provided")
+        })?;
         let symbol = config.symbols.first().cloned().unwrap_or_else(|| {
             log::warn!("Strategy {} has no symbols, using default", id);
             "BTCUSDT".to_string()

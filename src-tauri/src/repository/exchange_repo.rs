@@ -21,7 +21,7 @@ impl ExchangeRepository {
     pub async fn create(&self, config: &ExchangeConfig) -> Result<()> {
         sqlx::query(
             r#"
-            INSERT INTO exchange_configs (
+            INSERT INTO exchanges (
                 id, user_id, exchange_name, display_name,
                 api_key_encrypted, api_secret_encrypted, passphrase_encrypted,
                 is_testnet, status, created_at, updated_at
@@ -52,7 +52,7 @@ impl ExchangeRepository {
             SELECT id, user_id, exchange_name, display_name,
                    api_key_encrypted, api_secret_encrypted, passphrase_encrypted,
                    is_testnet, status, created_at, updated_at
-            FROM exchange_configs
+            FROM exchanges
             WHERE id = ?
             "#,
         )
@@ -85,7 +85,7 @@ impl ExchangeRepository {
             SELECT id, user_id, exchange_name, display_name,
                    api_key_encrypted, api_secret_encrypted, passphrase_encrypted,
                    is_testnet, status, created_at, updated_at
-            FROM exchange_configs
+            FROM exchanges
             WHERE user_id = ?
             ORDER BY created_at DESC
             "#,
@@ -121,7 +121,7 @@ impl ExchangeRepository {
             SELECT id, user_id, exchange_name, display_name,
                    api_key_encrypted, api_secret_encrypted, passphrase_encrypted,
                    is_testnet, status, created_at, updated_at
-            FROM exchange_configs
+            FROM exchanges
             WHERE user_id = ? AND exchange_name = ? AND status = 'active'
             ORDER BY updated_at DESC
             LIMIT 1
@@ -154,7 +154,7 @@ impl ExchangeRepository {
     pub async fn update(&self, config: &ExchangeConfig) -> Result<()> {
         sqlx::query(
             r#"
-            UPDATE exchange_configs
+            UPDATE exchanges
             SET display_name = ?,
                 api_key_encrypted = ?,
                 api_secret_encrypted = ?,
@@ -181,7 +181,7 @@ impl ExchangeRepository {
 
     /// Delete exchange configuration
     pub async fn delete(&self, id: &str) -> Result<()> {
-        sqlx::query("DELETE FROM exchange_configs WHERE id = ?")
+        sqlx::query("DELETE FROM exchanges WHERE id = ?")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -193,7 +193,7 @@ impl ExchangeRepository {
         let updated_at = chrono::Utc::now().timestamp_millis();
         sqlx::query(
             r#"
-            UPDATE exchange_configs
+            UPDATE exchanges
             SET status = ?, updated_at = ?
             WHERE id = ?
             "#,

@@ -66,7 +66,7 @@ export const userApi = {
    * 获取当前用户
    */
   getCurrentUser: (userId: string) =>
-    invokeRaw<User>('get_current_user', { user_id: userId }),
+    invokeRaw<User>('get_current_user', { userId }),
 };
 
 // ============== 行情 API ==============
@@ -108,7 +108,7 @@ export const strategyApi = {
    * 获取策略列表
    */
   list: (userId: string) =>
-    invoke<Strategy[]>('strategy_list', { user_id: userId }),
+    invoke<Strategy[]>('strategy_list', { userId }),
 
   /**
    * 获取策略详情
@@ -161,8 +161,8 @@ export const strategyEngineApi = {
   /**
    * 启动策略实例
    */
-  start: (config: StrategyConfig) =>
-    invokeRaw<string>('strategy_engine_start', { config }),
+  start: (userId: string, config: StrategyConfig) =>
+    invokeRaw<string>('strategy_engine_start', { userId, config }),
 
   /**
    * 停止策略实例
@@ -201,7 +201,7 @@ export const strategyInstanceApi = {
    * 列出策略实例
    */
   list: (userId?: string) =>
-    invokeRaw<InstanceInfo[]>('instance_list', { user_id: userId }),
+    invokeRaw<InstanceInfo[]>('instance_list', { userId }),
 
   /**
    * 获取策略实例
