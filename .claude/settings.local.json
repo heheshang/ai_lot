@@ -41,7 +41,8 @@
       "Bash(cargo clippy:*)",
       "Bash(ls:*)",
       "mcp__morphllm-fast-apply__edit_file",
-      "mcp__web-reader__webReader"
+      "mcp__web-reader__webReader",
+      "Bash(sqlite3:*)"
     ]
   },
   "enabledPlugins": {
