@@ -39,6 +39,23 @@ pub struct ExchangeConfigResponse {
     pub api_key_masked: String,
 }
 
+/// Response with full exchange config (including decrypted keys for editing)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExchangeConfigDetailResponse {
+    pub id: String,
+    pub exchange_name: String,
+    pub display_name: String,
+    pub api_key: String,
+    pub api_secret: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub passphrase: Option<String>,
+    pub is_testnet: bool,
+    pub status: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
 impl From<ExchangeConfig> for ExchangeConfigResponse {
     fn from(config: ExchangeConfig) -> Self {
         let api_key_masked = if config.api_key_encrypted.len() > 8 {
@@ -184,6 +201,41 @@ pub async fn exchange_get(
         .ok_or_else(|| format!("Exchange config not found: {}", config_id))?;
 
     Ok(config.into())
+}
+
+/// Get exchange configuration with decrypted keys (for editing)
+#[tauri::command]
+pub async fn exchange_get_detail(
+    db: State<'_, crate::infrastructure::Database>,
+    config_id: String,
+) -> Result<ExchangeConfigDetailResponse, String> {
+    log::info!("exchange_get_detail called: config_id={}", config_id);
+
+    let repo = ExchangeRepository::new(db.pool.clone());
+    let config = repo
+        .find_by_id(&config_id)
+        .await
+        .map_err(|e| format!("Failed to get exchange config: {}", e))?
+        .ok_or_else(|| format!("Exchange config not found: {}", config_id))?;
+
+    // Decrypt the keys
+    let (api_key, api_secret) = config.get_decrypted_keys()
+        .map_err(|e| format!("Failed to decrypt keys: {}", e))?;
+    let passphrase = config.get_decrypted_passphrase()
+        .map_err(|e| format!("Failed to decrypt passphrase: {}", e))?;
+
+    Ok(ExchangeConfigDetailResponse {
+        id: config.id,
+        exchange_name: config.exchange_name,
+        display_name: config.display_name,
+        api_key,
+        api_secret,
+        passphrase,
+        is_testnet: config.is_testnet,
+        status: config.status,
+        created_at: config.created_at,
+        updated_at: config.updated_at,
+    })
 }
 
 /// Delete an exchange configuration

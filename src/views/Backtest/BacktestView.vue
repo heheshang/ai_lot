@@ -504,7 +504,8 @@ import {
   List,
   Download,
 } from '@element-plus/icons-vue';
-import { backtestApi, strategyApi, type BacktestJob, type Strategy } from '@/api/tauri';
+import { backtestApi, strategyApi } from '@/api/tauri';
+import type { Strategy } from '@/types';
 
 // 图表引用
 const equityChartRef = ref<HTMLElement>();
@@ -723,84 +724,6 @@ async function runBacktest() {
       renderChart();
     });
   }
-}
-
-function generateMockResult() {
-  const initialCapital = backtestConfig.value.initialCapital;
-  const trades: Trade[] = [];
-  const equityCurve: number[] = [initialCapital];
-  const drawdownCurve: number[] = [0];
-
-  let balance = initialCapital;
-  let peak = balance;
-  const tradeCount = 50 + Math.floor(Math.random() * 100);
-
-  for (let i = 0; i < tradeCount; i++) {
-    const isBuy = Math.random() > 0.5;
-    const price = 40000 + Math.random() * 20000;
-    const amount = 0.1 + Math.random() * 2;
-    const value = price * amount;
-    const fee = value * (backtestConfig.value.feeRate / 100);
-
-    const pnl = isBuy ? null : (Math.random() - 0.45) * 2000;
-    if (pnl !== null) {
-      balance += pnl;
-    }
-    balance -= fee;
-
-    trades.push({
-      id: i + 1,
-      time: new Date(Date.now() - (tradeCount - i) * 3600 * 1000),
-      side: isBuy ? 'buy' : 'sell',
-      price,
-      amount,
-      value,
-      fee,
-      pnl,
-      balance,
-    });
-
-    equityCurve.push(balance);
-    peak = Math.max(peak, balance);
-    const drawdown = ((peak - balance) / peak) * 100;
-    drawdownCurve.push(-drawdown);
-  }
-
-  const winningTrades = trades.filter((t) => t.pnl && t.pnl > 0);
-  const losingTrades = trades.filter((t) => t.pnl && t.pnl < 0);
-
-  backtestResult.value = {
-    initialCapital,
-    finalCapital: balance,
-    profit: balance - initialCapital,
-    totalReturn: ((balance - initialCapital) / initialCapital) * 100,
-    maxDrawdown: Math.abs(Math.min(...drawdownCurve)),
-    sharpeRatio: 1.2 + Math.random() * 1.5,
-    totalTrades: trades.length,
-    winningTrades: winningTrades.length,
-    losingTrades: losingTrades.length,
-    winRate: (winningTrades.length / trades.length) * 100,
-    avgWin: winningTrades.reduce((sum, t) => sum + t.pnl!, 0) / winningTrades.length || 0,
-    avgLoss: losingTrades.reduce((sum, t) => sum + t.pnl!, 0) / losingTrades.length || 0,
-    profitFactor:
-      Math.abs(winningTrades.reduce((sum, t) => sum + t.pnl!, 0) /
-        losingTrades.reduce((sum, t) => sum + t.pnl!, 0)) || 0,
-    expectedValue: trades.reduce((sum, t) => sum + (t.pnl || 0), 0) / trades.length,
-    maxConsecutiveWins: Math.floor(Math.random() * 10) + 3,
-    maxConsecutiveLosses: Math.floor(Math.random() * 5) + 2,
-    maxSingleWin: Math.max(...winningTrades.map((t) => t.pnl!), 0),
-    maxSingleLoss: Math.min(...losingTrades.map((t) => t.pnl!), 0),
-    peakCapital: peak,
-    troughCapital: Math.min(...equityCurve),
-    avgCapitalUtilization: 60 + Math.random() * 30,
-    equityCurve,
-    drawdownCurve,
-    trades,
-  };
-
-  nextTick(() => {
-    renderChart();
-  });
 }
 
 function renderChart() {

@@ -245,7 +245,7 @@ import { invoke } from '@tauri-apps/api/core';
 import type {
   RiskRuleListItem,
   RiskRuleConfig,
-} from '/Users/ssk/Documents/project/personal/ai/ai_lot/src/types/risk';
+} from '@/types/risk';
 
 // 扩展的类型以支持 UI 状态
 interface RuleWithState extends RiskRuleListItem {

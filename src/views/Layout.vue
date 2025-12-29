@@ -475,7 +475,6 @@ import { ElMessageBox, ElMessage } from 'element-plus';
 import {
   Odometer,
   TrendCharts,
-  Document,
   DataAnalysis,
   ShoppingCart,
   Warning,

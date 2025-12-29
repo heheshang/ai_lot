@@ -209,6 +209,7 @@ pub fn run() {
             commands::exchange::exchange_update,
             commands::exchange::exchange_list,
             commands::exchange::exchange_get,
+            commands::exchange::exchange_get_detail,
             commands::exchange::exchange_delete,
             commands::exchange::exchange_update_status,
             // Strategy Debug commands

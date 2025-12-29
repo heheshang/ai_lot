@@ -507,22 +507,28 @@ export const riskApi = {
 };
 
 // ============== Config API ==============
-export interface SystemConfig {
-  theme: 'light' | 'dark' | 'auto';
-  language: string;
-  timezone: string;
-  notifications: {
-    enabled: boolean;
-    methods: string[];
+export interface AppConfig {
+  app: {
+    language: string;
+    theme: string;
+    auto_save_interval: number;
   };
-  trading: {
-    max_positions: number;
-    max_position_ratio: number;
-    default_leverage: number;
+  database: {
+    path: string;
+    backup_interval_hours: number;
+    backup_retention_days: number;
   };
   risk: {
-    daily_loss_limit: number;
-    max_drawdown_percent: number;
+    enabled: boolean;
+    default_action: string;
+  };
+  notifications: {
+    dingtalk_webhook?: string;
+    smtp_server?: string;
+    smtp_port?: number;
+    smtp_username?: string;
+    smtp_password?: string;
+    notification_emails?: string;
   };
 }
 
@@ -531,34 +537,47 @@ export const configApi = {
    * 获取系统配置
    */
   get: () =>
-    invokeRaw<SystemConfig>('config_get'),
+    invokeRaw<AppConfig>('config_get'),
 
   /**
    * 更新系统配置
    */
-  update: (config: Partial<SystemConfig>) =>
-    invokeRaw<SystemConfig>('config_update', { config }),
+  update: (updater: Record<string, any>) =>
+    invokeRaw<AppConfig>('config_update', { updater }),
 
   /**
    * 重置系统配置
    */
   reset: () =>
-    invokeRaw<SystemConfig>('config_reset'),
+    invokeRaw<AppConfig>('config_reset'),
 };
 
 // ============== Exchange API ==============
 export interface ExchangeConfig {
   id?: string;
-  exchange_name: string;
-  display_name: string;
-  api_key: string;
-  api_secret: string;
+  exchangeName: string;
+  displayName: string;
+  apiKey?: string;
+  apiSecret?: string;
   passphrase?: string;
-  is_testnet: boolean;
+  isTestnet: boolean;
   status?: string;
-  created_at?: number;
-  updated_at?: number;
-  api_key_masked?: string;
+  createdAt?: number;
+  updatedAt?: number;
+  apiKeyMasked?: string;
+}
+
+export interface ExchangeConfigDetail {
+  id: string;
+  exchangeName: string;
+  displayName: string;
+  apiKey: string;
+  apiSecret: string;
+  passphrase?: string;
+  isTestnet: boolean;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export const exchangeApi = {
@@ -567,14 +586,14 @@ export const exchangeApi = {
    */
   add: (userId: string, config: ExchangeConfig) =>
     invokeRaw<string>('exchange_add', {
-      user_id: userId,
+      userId,
       request: {
-        exchange_name: config.exchange_name,
-        display_name: config.display_name,
-        api_key: config.api_key,
-        api_secret: config.api_secret,
+        exchangeName: config.exchangeName,
+        displayName: config.displayName,
+        apiKey: config.apiKey,
+        apiSecret: config.apiSecret,
         passphrase: config.passphrase,
-        is_testnet: config.is_testnet,
+        isTestnet: config.isTestnet,
       },
     }),
 
@@ -583,14 +602,14 @@ export const exchangeApi = {
    */
   update: (configId: string, config: ExchangeConfig) =>
     invokeRaw<void>('exchange_update', {
-      config_id: configId,
+      configId,
       request: {
-        exchange_name: config.exchange_name,
-        display_name: config.display_name,
-        api_key: config.api_key,
-        api_secret: config.api_secret,
+        exchangeName: config.exchangeName,
+        displayName: config.displayName,
+        apiKey: config.apiKey,
+        apiSecret: config.apiSecret,
         passphrase: config.passphrase,
-        is_testnet: config.is_testnet,
+        isTestnet: config.isTestnet,
       },
     }),
 
@@ -598,26 +617,32 @@ export const exchangeApi = {
    * 列出交易所配置
    */
   list: (userId: string) =>
-    invokeRaw<ExchangeConfig[]>('exchange_list', { user_id: userId }),
+    invokeRaw<ExchangeConfig[]>('exchange_list', { userId }),
 
   /**
    * 获取交易所配置
    */
   get: (configId: string) =>
-    invokeRaw<ExchangeConfig>('exchange_get', { config_id: configId }),
+    invokeRaw<ExchangeConfig>('exchange_get', { configId }),
+
+  /**
+   * 获取交易所配置详情（包含解密后的密钥，用于编辑）
+   */
+  getDetail: (configId: string) =>
+    invokeRaw<ExchangeConfigDetail>('exchange_get_detail', { configId }),
 
   /**
    * 删除交易所配置
    */
   delete: (configId: string) =>
-    invokeRaw<void>('exchange_delete', { config_id: configId }),
+    invokeRaw<void>('exchange_delete', { configId }),
 
   /**
    * 更新交易所状态
    */
   updateStatus: (configId: string, status: string) =>
     invokeRaw<void>('exchange_update_status', {
-      config_id: configId,
+      configId,
       status,
     }),
 };
