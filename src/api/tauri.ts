@@ -39,7 +39,19 @@ export async function invokeRaw<T = any>(
   cmd: string,
   args?: Record<string, any>
 ): Promise<T> {
-  return tauriInvoke<T>(cmd, args);
+  try {
+    return await tauriInvoke<T>(cmd, args);
+  } catch (error) {
+    // 更好的错误处理
+    if (error instanceof Error) {
+      throw error;
+    }
+    // 将错误转换为 Error 对象
+    const errorMessage = typeof error === 'string'
+      ? error
+      : JSON.stringify(error);
+    throw new Error(errorMessage || 'Unknown error');
+  }
 }
 
 // ============== 用户 API ==============
@@ -107,21 +119,35 @@ export const strategyApi = {
   /**
    * 保存策略
    */
-  save: (strategy: Strategy) =>
-    invokeRaw<Strategy>('strategy_save', {
+  save: (strategy: Strategy) => {
+    // 转换参数格式：将 options 数组转换为符合后端的格式
+    const parameters = strategy.parameters.map(param => ({
+      name: param.name,
+      type: param.type,
+      default: param.default,
+      min: param.min,
+      max: param.max,
+      step: param.step,
+      options: param.options ? JSON.stringify(param.options) : undefined,
+      description: param.description,
+    }));
+
+    // 后端期望参数包装在 request 对象中
+    return invokeRaw<Strategy>('strategy_save', {
       request: {
-        id: strategy.id,
+        id: strategy.id || undefined,
         user_id: strategy.userId,
         name: strategy.name,
         description: strategy.description,
         code: strategy.code,
         language: strategy.language,
-        parameters: strategy.parameters,
+        parameters,
         parameter_values: strategy.parameterValues,
         category: strategy.category,
         tags: strategy.tags,
       },
-    }),
+    });
+  },
 
   /**
    * 删除策略

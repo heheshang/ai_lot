@@ -870,7 +870,12 @@ async function handleSave() {
       userId,
     };
 
-    await strategyApi.save(strategyToSave);
+    // 打印发送的数据用于调试
+    console.log('Saving strategy:', strategyToSave);
+
+    const result = await strategyApi.save(strategyToSave);
+
+    console.log('Strategy saved successfully:', result);
 
     ElMessage.success(isEdit.value ? '策略已更新' : '策略已创建');
 
@@ -878,7 +883,19 @@ async function handleSave() {
       router.push('/strategy');
     }, 500);
   } catch (error) {
-    ElMessage.error('保存失败：' + (error as Error).message);
+    console.error('Failed to save strategy:', error);
+
+    // 更详细的错误信息
+    let errorMessage = '保存失败';
+    if (error instanceof Error) {
+      errorMessage = error.message || errorMessage;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else {
+      errorMessage = JSON.stringify(error);
+    }
+
+    ElMessage.error(errorMessage);
   } finally {
     saving.value = false;
   }
@@ -914,9 +931,16 @@ onMounted(async () => {
     try {
       const strategy = await strategyApi.get(id);
       if (strategy) {
+        // 转换参数格式：将 options JSON 字符串解析为数组
+        const parameters = strategy.parameters.map(param => ({
+          ...param,
+          options: param.options ? (JSON.parse(param.options as string) as string[]) : undefined,
+        }));
+
         form.value = {
           ...form.value,
           ...strategy,
+          parameters,
           parameterValues: strategy.parameterValues || {},
         };
       }

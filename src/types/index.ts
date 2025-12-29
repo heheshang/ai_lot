@@ -85,7 +85,7 @@ export interface StrategyParameter {
   min?: number;
   max?: number;
   step?: number;
-  options?: { label: string; value: any }[];
+  options?: string[] | string;  // 前端使用数组，后端返回 JSON 字符串
   description?: string;
 }
 
