@@ -10,7 +10,7 @@
         </el-breadcrumb>
       </div>
       <div class="header-actions">
-        <el-button type="primary" @click="createStrategy">
+        <el-button type="primary" @click="createStrategy" class="create-btn">
           <el-icon><Plus /></el-icon>
           新建策略
         </el-button>
@@ -19,57 +19,23 @@
 
     <!-- 统计卡片 -->
     <el-row :gutter="16" class="stats-row">
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="hover">
+      <el-col :span="6" v-for="(stat, index) in statCards" :key="stat.key">
+        <div
+          class="stat-card"
+          :class="[stat.type, { 'stat-enter': statsEnter }]"
+          :style="{ transitionDelay: `${index * 80}ms` }"
+        >
+          <div class="stat-bg"></div>
           <div class="stat-content">
-            <div class="stat-icon total">
-              <el-icon :size="24"><Document /></el-icon>
+            <div class="stat-icon" :class="stat.type">
+              <el-icon :size="26"><component :is="stat.icon" /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-label">总策略数</div>
-              <div class="stat-value">{{ stats.total }}</div>
+              <div class="stat-value">{{ stat.value }}</div>
+              <div class="stat-label">{{ stat.label }}</div>
             </div>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="hover">
-          <div class="stat-content">
-            <div class="stat-icon draft">
-              <el-icon :size="24"><EditPen /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-label">草稿</div>
-              <div class="stat-value">{{ stats.draft }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="hover">
-          <div class="stat-content">
-            <div class="stat-icon testing">
-              <el-icon :size="24"><DataAnalysis /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-label">测试中</div>
-              <div class="stat-value">{{ stats.testing }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card" shadow="hover">
-          <div class="stat-content">
-            <div class="stat-icon active">
-              <el-icon :size="24"><CircleCheck /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-label">已激活</div>
-              <div class="stat-value">{{ stats.active }}</div>
-            </div>
-          </div>
-        </el-card>
+        </div>
       </el-col>
     </el-row>
 
@@ -81,6 +47,7 @@
             v-model="searchText"
             placeholder="搜索策略名称或描述"
             clearable
+            class="search-input"
             @input="handleSearch"
           >
             <template #prefix>
@@ -120,11 +87,9 @@
             <el-radio-group v-model="viewMode" size="default">
               <el-radio-button label="card">
                 <el-icon><Grid /></el-icon>
-                卡片
               </el-radio-button>
               <el-radio-button label="list">
                 <el-icon><List /></el-icon>
-                列表
               </el-radio-button>
             </el-radio-group>
           </div>
@@ -134,114 +99,141 @@
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
-      <el-icon class="is-loading" :size="40"><Loading /></el-icon>
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <div class="spinner-ring"></div>
+      </div>
       <p>加载策略列表中...</p>
     </div>
 
     <!-- 空状态 -->
     <div v-else-if="filteredStrategies.length === 0" class="empty-container">
-      <el-empty :description="searchText || filterCategory || filterStatus ? '未找到符合条件的策略' : '暂无策略'">
-        <el-button v-if="!searchText && !filterCategory && !filterStatus" type="primary" @click="createStrategy">
-          <el-icon><Plus /></el-icon>
-          创建第一个策略
-        </el-button>
-      </el-empty>
+      <div class="empty-illustration">
+        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="100" cy="100" r="80" fill="url(#grad1)" opacity="0.1"/>
+          <circle cx="100" cy="100" r="60" fill="url(#grad1)" opacity="0.15"/>
+          <path d="M70 85 L100 65 L130 85 V115 H70 V85Z" fill="url(#grad1)" opacity="0.3"/>
+          <rect x="85" y="95" width="30" height="35" rx="2" fill="url(#grad1)"/>
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <h3 class="empty-title">
+        {{ searchText || filterCategory || filterStatus ? '未找到符合条件的策略' : '暂无策略' }}
+      </h3>
+      <p class="empty-desc">
+        {{ searchText || filterCategory || filterStatus ? '试试调整筛选条件' : '创建您的第一个量化交易策略' }}
+      </p>
+      <el-button v-if="!searchText && !filterCategory && !filterStatus" type="primary" @click="createStrategy" class="empty-btn">
+        <el-icon><Plus /></el-icon>
+        创建第一个策略
+      </el-button>
     </div>
 
     <!-- 卡片视图 -->
     <div v-else-if="viewMode === 'card'" class="strategy-cards">
-      <el-card
-        v-for="strategy in paginatedStrategies"
-        :key="strategy.id"
-        class="strategy-card"
-        shadow="hover"
-        @click="viewStrategy(strategy.id)"
-      >
-        <div class="card-header">
-          <div class="strategy-icon" :style="{ background: getStrategyColor(strategy.category || '') }">
-            <el-icon :size="24"><component :is="getStrategyIcon(strategy.category || '')" /></el-icon>
-          </div>
-          <div class="strategy-info">
-            <h3 class="strategy-name">{{ strategy.name }}</h3>
-            <div class="strategy-meta">
-              <el-tag size="small" type="info">{{ getCategoryText(strategy.category || '') }}</el-tag>
-              <el-tag size="small" :type="getStatusType(strategy.status)">
-                {{ getStatusText(strategy.status) }}
-              </el-tag>
-              <span class="version-text">v{{ strategy.version }}</span>
+      <TransitionGroup name="card">
+        <el-card
+          v-for="(strategy, index) in paginatedStrategies"
+          :key="strategy.id"
+          class="strategy-card"
+          :class="`card-${index % 4}`"
+          shadow="hover"
+          @click="viewStrategy(strategy.id)"
+        >
+          <div class="card-header">
+            <div class="strategy-icon" :style="{ background: getStrategyColor(strategy.category || '') }">
+              <el-icon :size="24"><component :is="getStrategyIcon(strategy.category || '')" /></el-icon>
+            </div>
+            <div class="strategy-info">
+              <h3 class="strategy-name">{{ strategy.name }}</h3>
+              <div class="strategy-meta">
+                <el-tag size="small" type="info" effect="plain">{{ getCategoryText(strategy.category || '') }}</el-tag>
+                <el-tag size="small" :type="getStatusType(strategy.status)" effect="plain">
+                  {{ getStatusText(strategy.status) }}
+                </el-tag>
+                <span class="version-text">v{{ strategy.version }}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="card-body">
-          <p class="strategy-description">{{ strategy.description || '暂无描述' }}</p>
+          <div class="card-body">
+            <p class="strategy-description">{{ strategy.description || '暂无描述' }}</p>
 
-          <div class="strategy-tags" v-if="strategy.tags && strategy.tags.length > 0">
-            <el-tag
-              v-for="tag in strategy.tags.slice(0, 3)"
-              :key="tag"
-              size="small"
-              type="warning"
-              effect="plain"
-            >
-              {{ tag }}
-            </el-tag>
-            <span v-if="strategy.tags.length > 3" class="more-tags">
-              +{{ strategy.tags.length - 3 }}
-            </span>
+            <div class="strategy-tags" v-if="strategy.tags && strategy.tags.length > 0">
+              <TransitionGroup name="tag">
+                <el-tag
+                  v-for="tag in strategy.tags.slice(0, 3)"
+                  :key="tag"
+                  size="small"
+                  type="warning"
+                  effect="plain"
+                  class="tag-item"
+                >
+                  #{{ tag }}
+                </el-tag>
+              </TransitionGroup>
+              <span v-if="strategy.tags.length > 3" class="more-tags">
+                +{{ strategy.tags.length - 3 }}
+              </span>
+            </div>
+
+            <div class="strategy-dates">
+              <div class="date-item">
+                <el-icon><Calendar /></el-icon>
+                <span>创建: {{ formatDate(strategy.createdAt) }}</span>
+              </div>
+              <div class="date-item">
+                <el-icon><Clock /></el-icon>
+                <span>更新: {{ formatDate(strategy.updatedAt) }}</span>
+              </div>
+            </div>
           </div>
 
-          <div class="strategy-dates">
-            <div class="date-item">
-              <el-icon><Calendar /></el-icon>
-              <span>创建: {{ formatDate(strategy.createdAt) }}</span>
-            </div>
-            <div class="date-item">
-              <el-icon><Clock /></el-icon>
-              <span>更新: {{ formatDate(strategy.updatedAt) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-footer">
-          <el-button-group>
-            <el-button size="small" type="primary" @click.stop="editStrategy(strategy.id)">
-              <el-icon><Edit /></el-icon>
-              编辑
-            </el-button>
-            <el-button size="small" @click.stop="copyStrategy(strategy)">
-              <el-icon><CopyDocument /></el-icon>
-              复制
-            </el-button>
-            <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, strategy)">
-              <el-button size="small">
-                <el-icon><MoreFilled /></el-icon>
+          <div class="card-footer">
+            <el-button-group>
+              <el-button size="small" type="primary" @click.stop="editStrategy(strategy.id)">
+                <el-icon><Edit /></el-icon>
+                编辑
               </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="backtest">
-                    <el-icon><DataAnalysis /></el-icon>
-                    回测
-                  </el-dropdown-item>
-                  <el-dropdown-item command="export">
-                    <el-icon><Download /></el-icon>
-                    导出
-                  </el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>
-                    <el-icon><Delete /></el-icon>
-                    删除
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </el-button-group>
-        </div>
-      </el-card>
+              <el-button size="small" @click.stop="copyStrategy(strategy)">
+                <el-icon><CopyDocument /></el-icon>
+                复制
+              </el-button>
+              <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, strategy)">
+                <el-button size="small">
+                  <el-icon><MoreFilled /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="backtest">
+                      <el-icon><DataAnalysis /></el-icon>
+                      回测
+                    </el-dropdown-item>
+                    <el-dropdown-item command="export">
+                      <el-icon><Download /></el-icon>
+                      导出
+                    </el-dropdown-item>
+                    <el-dropdown-item command="delete" divided>
+                      <el-icon><Delete /></el-icon>
+                      删除
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </el-button-group>
+          </div>
+        </el-card>
+      </TransitionGroup>
     </div>
 
     <!-- 列表视图 -->
     <el-card v-else class="table-card" shadow="never">
-      <el-table :data="paginatedStrategies" stripe style="width: 100%">
+      <el-table :data="paginatedStrategies" stripe style="width: 100%" class="strategy-table">
         <el-table-column prop="name" label="策略名称" min-width="180">
           <template #default="{ row }">
             <div class="table-name">
@@ -263,13 +255,13 @@
 
         <el-table-column prop="category" label="分类" width="120">
           <template #default="{ row }">
-            <el-tag size="small" type="info">{{ getCategoryText(row.category) }}</el-tag>
+            <el-tag size="small" type="info" effect="plain">{{ getCategoryText(row.category) }}</el-tag>
           </template>
         </el-table-column>
 
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag size="small" :type="getStatusType(row.status)">
+            <el-tag size="small" :type="getStatusType(row.status)" effect="plain">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
@@ -277,7 +269,7 @@
 
         <el-table-column prop="version" label="版本" width="80">
           <template #default="{ row }">
-            v{{ row.version }}
+            <span class="version-text">v{{ row.version }}</span>
           </template>
         </el-table-column>
 
@@ -362,7 +354,6 @@ import {
   Download,
   Calendar,
   Clock,
-  Loading,
   Document,
   EditPen,
   CircleCheck,
@@ -384,8 +375,17 @@ const filterStatus = ref('');
 const sortBy = ref('created_at');
 const currentPage = ref(1);
 const pageSize = ref(12);
+const statsEnter = ref(false);
 
 const strategies = ref<Strategy[]>([]);
+
+// 统计卡片配置
+const statCards = computed(() => [
+  { key: 'total', label: '总策略数', value: stats.value.total, icon: Document, type: 'total' },
+  { key: 'draft', label: '草稿', value: stats.value.draft, icon: EditPen, type: 'draft' },
+  { key: 'testing', label: '测试中', value: stats.value.testing, icon: DataAnalysis, type: 'testing' },
+  { key: 'active', label: '已激活', value: stats.value.active, icon: CircleCheck, type: 'active' },
+]);
 
 // 统计数据
 const stats = computed(() => {
@@ -400,7 +400,6 @@ const stats = computed(() => {
 const filteredStrategies = computed(() => {
   let result = [...strategies.value];
 
-  // 搜索过滤
   if (searchText.value) {
     const keyword = searchText.value.toLowerCase();
     result = result.filter(s =>
@@ -410,17 +409,14 @@ const filteredStrategies = computed(() => {
     );
   }
 
-  // 分类过滤
   if (filterCategory.value) {
     result = result.filter(s => s.category === filterCategory.value);
   }
 
-  // 状态过滤
   if (filterStatus.value) {
     result = result.filter(s => s.status === filterStatus.value);
   }
 
-  // 排序
   result.sort((a, b) => {
     if (sortBy.value === 'name') {
       return a.name.localeCompare(b.name, 'zh-CN');
@@ -512,42 +508,18 @@ const formatDateTime = (timestamp: number) => {
   return new Date(timestamp * 1000).toLocaleString('zh-CN');
 };
 
-const handleSearch = () => {
-  currentPage.value = 1;
-};
+const handleSearch = () => { currentPage.value = 1; };
+const handleFilter = () => { currentPage.value = 1; };
+const handleSort = () => { currentPage.value = 1; };
+const handleSizeChange = () => { currentPage.value = 1; };
+const handlePageChange = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-const handleFilter = () => {
-  currentPage.value = 1;
-};
-
-const handleSort = () => {
-  currentPage.value = 1;
-};
-
-const handleSizeChange = () => {
-  currentPage.value = 1;
-};
-
-const handlePageChange = () => {
-  // 滚动到顶部
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-const createStrategy = () => {
-  router.push('/strategy/editor');
-};
-
-const viewStrategy = (id: string) => {
-  router.push(`/strategy/editor/${id}`);
-};
-
-const editStrategy = (id: string) => {
-  router.push(`/strategy/editor/${id}`);
-};
+const createStrategy = () => { router.push('/strategy/editor'); };
+const viewStrategy = (id: string) => { router.push(`/strategy/editor/${id}`); };
+const editStrategy = (id: string) => { router.push(`/strategy/editor/${id}`); };
 
 const copyStrategy = async (strategy: Strategy) => {
   try {
-    // 创建副本（移除 ID，修改名称）
     const copy: Partial<Strategy> = {
       ...strategy,
       id: '',
@@ -557,7 +529,6 @@ const copyStrategy = async (strategy: Strategy) => {
       createdAt: 0,
       updatedAt: 0,
     };
-
     await strategyApi.save(copy as Strategy);
     ElMessage.success('策略复制成功');
     await loadStrategies();
@@ -592,11 +563,7 @@ const handleAction = async (command: string, strategy: Strategy) => {
         await ElMessageBox.confirm(
           `确定要删除策略"${strategy.name}"吗？此操作不可撤销。`,
           '确认删除',
-          {
-            confirmButtonText: '删除',
-            cancelButtonText: '取消',
-            type: 'warning',
-          }
+          { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
         );
         await strategyApi.delete(strategy.id);
         ElMessage.success('策略已删除');
@@ -611,18 +578,18 @@ const handleAction = async (command: string, strategy: Strategy) => {
   }
 };
 
-// 加载策略列表
 const loadStrategies = async () => {
   const userId = userStore.user?.id;
   if (!userId) {
     ElMessage.error('请先登录');
     return;
   }
-
   loading.value = true;
   try {
     const data = await strategyApi.list(userId);
     strategies.value = data;
+    // 触发入场动画
+    setTimeout(() => { statsEnter.value = true; }, 100);
   } catch (error) {
     console.error('Failed to load strategies:', error);
     ElMessage.error('加载策略列表失败');
@@ -631,16 +598,14 @@ const loadStrategies = async () => {
   }
 };
 
-onMounted(() => {
-  loadStrategies();
-});
+onMounted(() => { loadStrategies(); });
 </script>
 
 <style scoped lang="scss">
 .strategy-list {
   padding: 20px;
   min-height: calc(100vh - 60px);
-  background: #f5f7fa;
+  background: linear-gradient(180deg, #f5f7fa 0%, #e9eef3 100%);
 }
 
 // 页面头部
@@ -649,10 +614,10 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  padding: 20px;
+  padding: 24px;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .header-left {
@@ -662,10 +627,26 @@ onMounted(() => {
 }
 
 .page-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
   color: #303133;
   margin: 0;
+}
+
+.create-btn {
+  height: 40px;
+  padding: 0 24px;
+  font-size: 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
 }
 
 // 统计卡片
@@ -674,76 +655,132 @@ onMounted(() => {
 }
 
 .stat-card {
-  :deep(.el-card__body) {
-    padding: 20px;
+  position: relative;
+  border-radius: 16px;
+  padding: 20px;
+  background: white;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+
+  &.stat-enter {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+    .stat-bg {
+      transform: scale(1.2);
+    }
+  }
+
+  &__bg {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    opacity: 0.1;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 }
+
+.stat-card.total .stat-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.stat-card.draft .stat-bg { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+.stat-card.testing .stat-bg { background: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%); }
+.stat-card.active .stat-bg { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
 
 .stat-content {
   display: flex;
   align-items: center;
   gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  &.total {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  }
+  &.total { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+  &.draft { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+  &.testing { background: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%); }
+  &.active { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+}
 
-  &.draft {
-    background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-  }
-
-  &.testing {
-    background: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%);
-  }
-
-  &.active {
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  }
+.stat-card:hover .stat-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .stat-info {
   flex: 1;
 }
 
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-  margin-bottom: 4px;
-}
-
 .stat-value {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
   color: #303133;
   line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
 }
 
 // 筛选卡片
 .filter-card {
   margin-bottom: 20px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 
   :deep(.el-card__body) {
     padding: 16px 20px;
   }
 }
 
+.search-input {
+  :deep(.el-input__wrapper) {
+    border-radius: 10px;
+  }
+}
+
 .view-toggle {
   display: flex;
   justify-content: flex-end;
+
+  :deep(.el-radio-button) {
+    .el-radio-button__inner {
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+
+    &:first-child .el-radio-button__inner {
+      border-radius: 8px 0 0 8px;
+    }
+
+    &:last-child .el-radio-button__inner {
+      border-radius: 0 8px 8px 0;
+    }
+  }
 }
 
-// 加载和空状态
+// 加载状态
 .loading-container,
 .empty-container {
   display: flex;
@@ -751,29 +788,88 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 80px 20px;
-  color: #909399;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
 
-  .el-icon {
-    color: #409eff;
-    margin-bottom: 16px;
-  }
+.loading-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 20px;
+}
+
+.spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 3px solid transparent;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50px;
+  height: 50px;
+  margin: -25px 0 0 -25px;
+  border: 2px solid transparent;
+  border-top-color: #764ba2;
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite reverse;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// 空状态
+.empty-illustration {
+  width: 160px;
+  height: 160px;
+  margin-bottom: 24px;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 8px 0;
+}
+
+.empty-desc {
+  font-size: 14px;
+  color: #909399;
+  margin: 0 0 24px 0;
+}
+
+.empty-btn {
+  height: 40px;
+  padding: 0 24px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
 }
 
 // 卡片视图
 .strategy-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 20px;
   margin-bottom: 20px;
 }
 
 .strategy-card {
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 12px;
+  border-radius: 16px;
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 
   :deep(.el-card__body) {
     padding: 20px;
@@ -783,9 +879,23 @@ onMounted(() => {
   }
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12) !important;
   }
+}
+
+.card-enter-active {
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.card-enter-from {
+  opacity: 0;
+  transform: translateY(30px) scale(0.95);
+}
+
+.card-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .card-header {
@@ -795,15 +905,20 @@ onMounted(() => {
 }
 
 .strategy-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.strategy-card:hover .strategy-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .strategy-info {
@@ -862,16 +977,34 @@ onMounted(() => {
   .more-tags {
     font-size: 12px;
     color: #909399;
+    padding: 2px 8px;
+    background: #f5f7fa;
+    border-radius: 6px;
+  }
+}
+
+.tag-item {
+  animation: tag-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tag-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
 .strategy-dates {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ebeef5 100%);
+  border-radius: 10px;
 }
 
 .date-item {
@@ -893,6 +1026,9 @@ onMounted(() => {
 
 // 列表视图
 .table-card {
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+
   :deep(.el-table) {
     .table-name {
       display: flex;
@@ -903,7 +1039,7 @@ onMounted(() => {
     .strategy-icon-small {
       width: 40px;
       height: 40px;
-      border-radius: 8px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -922,6 +1058,25 @@ onMounted(() => {
       color: #909399;
       margin-top: 2px;
     }
+
+    tr:hover {
+      .strategy-icon-small {
+        transform: scale(1.1);
+      }
+    }
+  }
+}
+
+.strategy-table {
+  border-radius: 16px;
+  overflow: hidden;
+
+  :deep(.el-table__row) {
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%) !important;
+    }
   }
 }
 
@@ -931,14 +1086,14 @@ onMounted(() => {
   justify-content: center;
   padding: 20px;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 // 响应式
 @media (max-width: 1200px) {
   .strategy-cards {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
 }
 
@@ -947,9 +1102,17 @@ onMounted(() => {
     padding: 12px;
   }
 
-  .stats-row {
-    :el-col {
-      margin-bottom: 12px;
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .header-actions {
+    width: 100%;
+
+    .create-btn {
+      width: 100%;
     }
   }
 

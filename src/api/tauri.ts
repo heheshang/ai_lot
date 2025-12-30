@@ -39,9 +39,13 @@ export async function invokeRaw<T = any>(
   cmd: string,
   args?: Record<string, any>
 ): Promise<T> {
+  console.log(`[invokeRaw] Calling command: ${cmd}`, args || '');
   try {
-    return await tauriInvoke<T>(cmd, args);
+    const result = await tauriInvoke<T>(cmd, args);
+    console.log(`[invokeRaw] Command ${cmd} succeeded:`, result);
+    return result;
   } catch (error) {
+    console.error(`[invokeRaw] Command ${cmd} failed:`, error);
     // 更好的错误处理
     if (error instanceof Error) {
       throw error;

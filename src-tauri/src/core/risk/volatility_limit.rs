@@ -211,7 +211,7 @@ mod tests {
                 atr_period: 14,
                 history_size: 20,
             },
-            RiskAction::Warning,
+            RiskAction::LogOnly,
         );
 
         let symbol = "BTCUSDT";
@@ -244,7 +244,7 @@ mod tests {
     fn test_atr_calculation() {
         let rule = VolatilityLimitRule::new(
             VolatilityLimitParams::default(),
-            RiskAction::Warning,
+            RiskAction::LogOnly
         );
 
         let symbol = "BTCUSDT";
@@ -269,7 +269,7 @@ mod tests {
                 history_size: 5,
                 ..Default::default()
             },
-            RiskAction::Warning,
+            RiskAction::LogOnly,
         );
 
         let symbol = "BTCUSDT";

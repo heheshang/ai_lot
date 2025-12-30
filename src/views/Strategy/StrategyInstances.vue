@@ -82,11 +82,16 @@
         <div class="card-header">
           <span>运行实例</span>
           <el-radio-group v-model="viewMode" size="small">
-            <el-radio-button label="card">卡片</el-radio-button>
-            <el-radio-button label="list">列表</el-radio-button>
+            <el-radio-button value="card">卡片</el-radio-button>
+            <el-radio-button value="list">列表</el-radio-button>
           </el-radio-group>
         </div>
       </template>
+
+      <!-- 调试信息 -->
+      <div style="background: #f0f0f0; padding: 10px; margin-bottom: 10px; font-size: 12px;">
+        <strong>DEBUG:</strong> loading={{ loading }}, instances.length={{ instances.length }}
+      </div>
 
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-container">
@@ -157,18 +162,18 @@
 
             <div class="instance-row">
               <span class="row-label">运行时长</span>
-              <span class="row-value">{{ formatRuntime((instance as any).startTime) }}</span>
+              <span class="row-value">{{ formatRuntime(instance.startTime) }}</span>
             </div>
 
-            <div class="instance-stats" v-if="(instance as any).stats">
+            <div class="instance-stats" v-if="instance.stats">
               <div class="mini-stat">
                 <span class="mini-stat-label">交易次数</span>
-                <span class="mini-stat-value">{{ (instance as any).stats?.tradeCount || 0 }}</span>
+                <span class="mini-stat-value">{{ instance.stats?.tradeCount || 0 }}</span>
               </div>
               <div class="mini-stat">
                 <span class="mini-stat-label">盈亏</span>
-                <span class="mini-stat-value" :class="((instance as any).stats?.pnl || 0) >= 0 ? 'profit' : 'loss'">
-                  {{ ((instance as any).stats?.pnl || 0) >= 0 ? '+' : '' }}{{ (instance as any).stats?.pnl || 0 }}
+                <span class="mini-stat-value" :class="(instance.stats?.pnl || 0) >= 0 ? 'profit' : 'loss'">
+                  {{ (instance.stats?.pnl || 0) >= 0 ? '+' : '' }}{{ instance.stats?.pnl || 0 }}
                 </span>
               </div>
             </div>
@@ -420,6 +425,10 @@ import { strategyEngineApi, strategyApi } from '@/api/tauri';
 import type { InstanceInfo, StrategyConfig, Strategy } from '@/types';
 import { useUserStore } from '@/store/modules/user';
 
+// Debug: Check if API is imported correctly
+console.log('[StrategyInstances] strategyEngineApi:', strategyEngineApi);
+console.log('[StrategyInstances] strategyEngineApi.list:', strategyEngineApi?.list);
+
 const userStore = useUserStore();
 const instances = ref<InstanceInfo[]>([]);
 const strategies = ref<Strategy[]>([]);
@@ -472,13 +481,32 @@ let refreshInterval: number | null = null;
 
 // 获取实例列表
 const loadInstances = async () => {
+  console.log('[loadInstances] ===== START =====');
   loading.value = true;
+  console.log('[loadInstances] loading set to true');
+
   try {
-    instances.value = await strategyEngineApi.list();
+    console.log('[loadInstances] Calling strategyEngineApi.list()...');
+    const result = await strategyEngineApi.list();
+    console.log('[loadInstances] Got result:', result);
+    console.log('[loadInstances] Result type:', typeof result);
+    console.log('[loadInstances] Is array:', Array.isArray(result));
+
+    if (Array.isArray(result)) {
+      instances.value = result;
+      console.log('[loadInstances] Set instances.value, length:', instances.value.length);
+    } else {
+      console.error('[loadInstances] Result is not an array!', result);
+    }
   } catch (error: any) {
-    ElMessage.error('加载实例列表失败: ' + error.message);
+    console.error('[loadInstances] ===== ERROR =====');
+    console.error('[loadInstances] Error:', error);
+    console.error('[loadInstances] Error message:', error?.message);
+    console.error('[loadInstances] Error stack:', error?.stack);
+    ElMessage.error('加载实例列表失败: ' + (error?.message || 'Unknown error'));
   } finally {
     loading.value = false;
+    console.log('[loadInstances] ===== FINALLY - loading set to false =====');
   }
 };
 
@@ -679,17 +707,24 @@ const formatRuntime = (startTime?: string) => {
 };
 
 onMounted(() => {
+  console.log('[StrategyInstances] ===== Component MOUNTED =====');
+  console.log('[StrategyInstances] Calling loadInstances()...');
   loadInstances();
+  console.log('[StrategyInstances] Calling loadStrategies()...');
   loadStrategies();
   // 每5秒刷新一次实例列表
   refreshInterval = window.setInterval(() => {
+    console.log('[StrategyInstances] Interval: calling loadInstances()');
     loadInstances();
   }, 5000);
+  console.log('[StrategyInstances] Interval set up: 5000ms');
 });
 
 onUnmounted(() => {
+  console.log('[StrategyInstances] ===== Component UNMOUNTED =====');
   if (refreshInterval !== null) {
     clearInterval(refreshInterval);
+    console.log('[StrategyInstances] Interval cleared');
   }
 });
 </script>

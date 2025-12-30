@@ -25,6 +25,10 @@ export interface User {
   status: UserStatus;
   createdAt: number;
   updatedAt: number;
+  avatar?: string;
+  bio?: string;
+  email?: string;
+  phone?: string;
 }
 
 // ============== 认证类型 ==============
@@ -36,6 +40,34 @@ export interface LoginRequest {
 export interface LoginResponse {
   user: User;
   token: string;
+}
+
+// ============== 用户资料类型 ==============
+export interface UserProfile {
+  displayName?: string;
+  bio?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface UserPreferences {
+  language: string;
+  timezone: string;
+  emailNotification: boolean;
+  tradeNotification: boolean;
+  riskAlert: boolean;
+}
+
+export interface UpdateProfileRequest {
+  displayName?: string;
+  bio?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
 }
 
 // ============== 交易所类型 ==============
@@ -136,12 +168,19 @@ export interface StrategyConfig {
   timeframes: string[];
 }
 
+export interface InstanceStats {
+  tradeCount: number;
+  pnl: number;
+}
+
 export interface InstanceInfo {
   id: string;
   name: string;
   status: InstanceStatus;
   symbols: string[];
   timeframes: string[];
+  startTime?: number;
+  stats?: InstanceStats;
 }
 
 // ============== 交易类型 ==============

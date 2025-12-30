@@ -33,12 +33,26 @@ pub struct StrategyConfig {
 /// 运行中的策略实例状态
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InstanceStatus {
+    #[serde(rename = "Starting")]
     Starting,
+    #[serde(rename = "Running")]
     Running,
+    #[serde(rename = "Paused")]
     Paused,
+    #[serde(rename = "Stopping")]
     Stopping,
+    #[serde(rename = "Stopped")]
     Stopped,
-    Error(String),
+    #[serde(rename = "Error")]
+    Error,
+}
+
+/// 实例统计信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstanceStats {
+    #[serde(rename = "tradeCount")]
+    pub trade_count: i64,
+    pub pnl: f64,
 }
 
 /// 策略实例信息
@@ -49,6 +63,10 @@ pub struct InstanceInfo {
     pub status: InstanceStatus,
     pub symbols: Vec<String>,
     pub timeframes: Vec<String>,
+    #[serde(rename = "startTime", skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stats: Option<InstanceStats>,
 }
 
 /// 运行中的策略实例
@@ -88,7 +106,10 @@ impl RunningInstance {
         instance_repo: Arc<StrategyInstanceRepository>,
         risk_rules: Vec<Box<dyn RiskRule>>,
     ) -> Result<Self> {
+        log::info!("[RunningInstance::new] Creating instance {}", id);
+        log::info!("[RunningInstance::new] Creating ScriptExecutor...");
         let executor = ScriptExecutor::new()?;
+        log::info!("[RunningInstance::new] ScriptExecutor created successfully");
         Ok(Self {
             id,
             config,
@@ -495,19 +516,44 @@ impl RunningInstance {
 
     /// 获取实例信息
     pub fn info(&self) -> InstanceInfo {
+        log::debug!("[info] Starting info() for instance {}", self.id);
+
         let status = if self.paused.load(std::sync::atomic::Ordering::SeqCst) {
             InstanceStatus::Paused
         } else {
             InstanceStatus::Running
         };
 
-        InstanceInfo {
+        log::debug!("[info] Status determined: {:?}", status);
+
+        // 获取当前时间戳（使用非弃用方法）
+        let now = chrono::Utc::now();
+        let start_time = now.timestamp();
+
+        log::debug!("[info] Got timestamp: {}", start_time);
+
+        // 获取交易计数
+        let trade_count = self.daily_trade_count.load(std::sync::atomic::Ordering::SeqCst) as i64;
+
+        log::debug!("[info] Trade count: {}", trade_count);
+
+        let info = InstanceInfo {
             id: self.id.clone(),
             name: self.config.name.clone(),
             status,
             symbols: self.config.symbols.clone(),
             timeframes: self.config.timeframes.clone(),
-        }
+            start_time: Some(start_time),
+            stats: Some(InstanceStats {
+                trade_count,
+                pnl: 0.0,
+            }),
+        };
+
+        log::debug!("[info] Instance info created: id={}, name={}, status={:?}",
+            info.id, info.name, info.status);
+
+        info
     }
 }
 
@@ -536,18 +582,21 @@ impl StrategyEngine {
 
     /// 启动策略实例
     pub async fn start_instance(&self, config: StrategyConfig, user_id: String, exchange_id: Option<String>) -> Result<String> {
+        log::info!("[start_instance] ===== START =====");
         let id = config.id.clone().unwrap_or_else(|| {
             uuid::Uuid::new_v4().to_string()
         });
 
         // 检查是否已存在
+        log::info!("[start_instance] Checking if instance {} already exists", id);
         let instances = self.instances.read().await;
         if instances.contains_key(&id) {
+            drop(instances);
             return Err(anyhow::anyhow!("Strategy instance {} already exists", id));
         }
         drop(instances);
 
-        log::info!("Starting strategy instance: {} ({}) for user: {}", id, config.name, user_id);
+        log::info!("[start_instance] Starting strategy instance: {} ({}) for user: {}", id, config.name, user_id);
 
         // 构建数据库请求
         let strategy_id = id.clone();
@@ -579,6 +628,7 @@ impl StrategyEngine {
         };
 
         // 在数据库中创建实例记录
+        log::info!("[start_instance] Creating instance in database...");
         let db_instance = match self.instance_repo.create(create_req).await {
             Ok(instance) => instance,
             Err(e) => {
@@ -588,9 +638,10 @@ impl StrategyEngine {
         };
 
         let instance_id = db_instance.id.clone();
-        log::info!("Created strategy instance record in database: {}", instance_id);
+        log::info!("[start_instance] Created strategy instance record in database: {}", instance_id);
 
         // 更新状态为 running
+        log::info!("[start_instance] Updating status to running...");
         if let Err(e) = self.instance_repo.update_status(&instance_id, "running", None).await {
             log::error!("Failed to update strategy instance status: {}", e);
             // 清理已创建的记录
@@ -598,14 +649,16 @@ impl StrategyEngine {
             return Err(e);
         }
 
-        log::info!("Updated strategy instance {} status to running", instance_id);
+        log::info!("[start_instance] Updated strategy instance {} status to running", instance_id);
 
         // 创建默认风控规则
+        log::info!("[start_instance] Creating risk rules...");
         let risk_rules: Vec<Box<dyn RiskRule>> = vec![
             // TODO: 从配置加载风控规则
         ];
 
         // 创建运行实例
+        log::info!("[start_instance] Creating RunningInstance...");
         let instance = RunningInstance::new(
             instance_id.clone(),
             config,
@@ -615,14 +668,17 @@ impl StrategyEngine {
             self.instance_repo.clone(),
             risk_rules,
         )?;
+        log::info!("[start_instance] RunningInstance created successfully");
 
         // 启动策略循环
+        log::info!("[start_instance] Spawning strategy run loop...");
         let instance_ref = Arc::new(RwLock::new(instance));
         let instance_clone = instance_ref.clone();
         let instance_id_clone = instance_id.clone();
         let repo_clone = self.instance_repo.clone();
 
         tokio::spawn(async move {
+            log::info!("[run_loop] Starting run loop for {}", instance_id_clone);
             let mut instance = instance_clone.write().await;
             if let Err(e) = instance.run().await {
                 log::error!("Strategy instance {} error: {}", instance_id_clone, e);
@@ -632,12 +688,17 @@ impl StrategyEngine {
                     log::error!("Failed to update instance {} error status: {}", instance_id_clone, db_err);
                 }
             }
+            log::info!("[run_loop] Run loop ended for {}", instance_id_clone);
         });
 
         // 保存实例到内存
+        log::info!("[start_instance] Saving instance to memory...");
         let mut instances = self.instances.write().await;
-        instances.insert(instance_id.clone(), instance_ref);
+        instances.insert(instance_id.clone(), instance_ref.clone());
+        drop(instances);
+        log::info!("[start_instance] Instance saved to memory");
 
+        log::info!("[start_instance] ===== COMPLETE - returning instance_id: {} =====", instance_id);
         Ok(instance_id)
     }
 
@@ -724,14 +785,34 @@ impl StrategyEngine {
 
     /// 获取所有实例信息
     pub async fn list_instances(&self) -> Vec<InstanceInfo> {
+        log::debug!("[list_instances] Starting to list instances");
         let instances = self.instances.read().await;
+        log::debug!("[list_instances] Acquired lock, found {} instances in memory", instances.len());
         let mut infos = Vec::new();
 
-        for instance in instances.values() {
-            let instance = instance.read().await;
-            infos.push(instance.info());
+        for (id, instance_arc) in instances.iter() {
+            log::debug!("[list_instances] Processing instance: {}", id);
+
+            // 使用 try_read 避免死锁 - 如果写锁被持有，跳过此实例
+            match instance_arc.try_read() {
+                Ok(instance) => {
+                    log::debug!("[list_instances] Got read lock for {}", id);
+                    let instance_id = instance.id.clone();
+                    log::debug!("[list_instances] Calling info() for {}", instance_id);
+
+                    let info = instance.info();
+                    log::debug!("[list_instances] Got info for {}: id={}, name={}", instance_id, info.id, info.name);
+                    infos.push(info);
+                }
+                Err(_) => {
+                    log::warn!("[list_instances] Could not get read lock for {} (possibly running), skipping", id);
+                    // 无法获取读锁（写锁被持有），跳过此实例
+                    continue;
+                }
+            }
         }
 
+        log::debug!("[list_instances] Returning {} instances", infos.len());
         infos
     }
 
@@ -806,13 +887,11 @@ mod tests {
 
     #[test]
     fn test_instance_status_serialization() {
-        let status = InstanceStatus::Error("test error".to_string());
+        let status = InstanceStatus::Error;
         let json = serde_json::to_string(&status).unwrap();
-        let decoded: InstanceStatus = serde_json::from_str(&json).unwrap();
+        assert_eq!(json, "\"Error\"");
 
-        match decoded {
-            InstanceStatus::Error(msg) => assert_eq!(msg, "test error"),
-            _ => panic!("Expected Error status"),
-        }
+        let decoded: InstanceStatus = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, InstanceStatus::Error);
     }
 }

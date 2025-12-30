@@ -20,6 +20,7 @@ const RuleConfig = () => import('@/views/Risk/RuleConfig.vue');
 const AlertHistory = () => import('@/views/Risk/AlertHistory.vue');
 const Settings = () => import('@/views/settings/Settings.vue');
 const Exchange = () => import('@/views/settings/Exchange.vue');
+const Profile = () => import('@/views/settings/Profile.vue');
 
 const routes: RouteRecordRaw[] = [
   {
@@ -111,6 +112,12 @@ const routes: RouteRecordRaw[] = [
         name: 'Exchange',
         component: Exchange,
         meta: { title: '交易所设置' },
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: Profile,
+        meta: { title: '个人资料' },
       },
     ],
   },

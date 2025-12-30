@@ -186,7 +186,7 @@ mod tests {
                 max_daily_loss: 500.0,
                 ..Default::default()
             },
-            RiskAction::Warning,
+            RiskAction::LogOnly,
         );
 
         let instance_id = "test-instance";

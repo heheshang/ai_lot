@@ -184,8 +184,14 @@ pub async fn strategy_engine_resume(
 pub async fn strategy_engine_list(
     db: State<'_, Database>,
 ) -> Result<Vec<crate::core::strategy::InstanceInfo>, String> {
+    log::info!("[strategy_engine_list] Listing all strategy instances");
     let engine = db.get_strategy_engine();
-    Ok(engine.list_instances().await)
+    let instances = engine.list_instances().await;
+    log::info!("[strategy_engine_list] Found {} instances", instances.len());
+    for (i, instance) in instances.iter().enumerate() {
+        log::info!("[strategy_engine_list] Instance {}: id={}, name={}, status={:?}", i, instance.id, instance.name, instance.status);
+    }
+    Ok(instances)
 }
 
 /// 获取单个策略实例信息

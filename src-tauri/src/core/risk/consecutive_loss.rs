@@ -230,7 +230,7 @@ mod tests {
                 min_loss_threshold: 1.0,
                 cooling_period_seconds: 60,
             },
-            RiskAction::Warning,
+            RiskAction::LogOnly,
         );
 
         let instance_id = "test-instance";
@@ -261,7 +261,7 @@ mod tests {
     fn test_win_resets_count() {
         let rule = ConsecutiveLossLimitRule::new(
             ConsecutiveLossLimitParams::default(),
-            RiskAction::Warning,
+            RiskAction::LogOnly,
         );
 
         let instance_id = "test-instance";
@@ -283,7 +283,7 @@ mod tests {
                 min_loss_threshold: 10.0,
                 ..Default::default()
             },
-            RiskAction::Warning,
+            RiskAction::LogOnly,
         );
 
         let instance_id = "test-instance";
