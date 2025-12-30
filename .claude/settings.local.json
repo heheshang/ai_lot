@@ -42,7 +42,9 @@
       "Bash(ls:*)",
       "mcp__morphllm-fast-apply__edit_file",
       "mcp__web-reader__webReader",
-      "Bash(npm run dev)"
+      "Bash(npm run dev)",
+      "Bash(sqlite3:*)"
+
     ]
   },
   "enabledPlugins": {

@@ -303,22 +303,50 @@
       v-model="showStartDialog"
       title="启动策略实例"
       width="600px"
+      @open="loadStrategies"
       @close="resetForm"
     >
       <el-form :model="form" :rules="rules" ref="formRef" label-width="120px">
-        <el-form-item label="策略名称" prop="name">
-          <el-input v-model="form.name" placeholder="输入策略名称" />
-        </el-form-item>
-
-        <el-form-item label="策略代码" prop="code">
-          <el-input
-            v-model="form.code"
-            type="textarea"
-            :rows="8"
-            placeholder="输入JavaScript策略代码"
-          />
-          <div class="form-hint">
-            示例: function onBar(context, kline) { if (kline.close > kline.open) { return { action: 'buy', symbol: kline.symbol, quantity: 0.1, price: kline.close }; } return null; }
+        <el-form-item label="选择策略" prop="strategyId">
+          <el-select
+            v-model="form.strategyId"
+            filterable
+            placeholder="选择要运行的策略"
+            style="width: 100%"
+            @focus="loadStrategies"
+            :loading="strategies.length === 0"
+          >
+            <template v-if="strategies.length === 0" #empty>
+              <div style="padding: 12px; text-align: center; color: #909399;">
+                <p>暂无可用策略</p>
+                <p style="font-size: 12px; margin-top: 8px;">请先在「策略管理」页面创建策略</p>
+              </div>
+            </template>
+            <el-option
+              v-for="strategy in strategies"
+              :key="strategy.id"
+              :label="`${strategy.name} - ${getCategoryText(strategy.category || 'trend')}`"
+              :value="strategy.id"
+            >
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>{{ strategy.name }}</span>
+                <el-tag size="small" :type="getStrategyStatusType(strategy.status)">
+                  {{ getStrategyStatusText(strategy.status) }}
+                </el-tag>
+              </div>
+            </el-option>
+          </el-select>
+          <div v-if="selectedStrategy" class="strategy-preview">
+            <div class="preview-header">
+              <span>策略预览: {{ selectedStrategy.name }}</span>
+              <el-tag size="small">{{ selectedStrategy.language }}</el-tag>
+            </div>
+            <div class="preview-code">
+              <pre>{{ selectedStrategy.code.slice(0, 200) }}{{ selectedStrategy.code.length > 200 ? '...' : '' }}</pre>
+            </div>
+            <div v-if="selectedStrategy.description" class="preview-description">
+              {{ selectedStrategy.description }}
+            </div>
           </div>
         </el-form-item>
 
@@ -375,7 +403,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import {
   Plus,
@@ -388,10 +416,13 @@ import {
   View,
   Tickets,
 } from '@element-plus/icons-vue';
-import { strategyEngineApi } from '@/api/tauri';
-import type { InstanceInfo, StrategyConfig } from '@/types';
+import { strategyEngineApi, strategyApi } from '@/api/tauri';
+import type { InstanceInfo, StrategyConfig, Strategy } from '@/types';
+import { useUserStore } from '@/store/modules/user';
 
+const userStore = useUserStore();
 const instances = ref<InstanceInfo[]>([]);
+const strategies = ref<Strategy[]>([]);
 const loading = ref(false);
 const showStartDialog = ref(false);
 const starting = ref(false);
@@ -399,19 +430,37 @@ const viewMode = ref<'card' | 'list'>('card');
 const formRef = ref<FormInstance>();
 
 const form = reactive({
-  name: '',
-  code: '',
+  strategyId: '',
   parametersJson: '{}',
   symbols: [] as string[],
   timeframes: [] as string[],
 });
 
 const rules: FormRules = {
-  name: [{ required: true, message: '请输入策略名称', trigger: 'blur' }],
-  code: [{ required: true, message: '请输入策略代码', trigger: 'blur' }],
+  strategyId: [{ required: true, message: '请选择策略', trigger: 'change' }],
   symbols: [{ required: true, message: '请选择订阅交易对', trigger: 'change' }],
   timeframes: [{ required: true, message: '请选择订阅周期', trigger: 'change' }],
 };
+
+// 当前选中的策略
+const selectedStrategy = computed(() => {
+  if (!form.strategyId) return null;
+  return strategies.value.find(s => s.id === form.strategyId) || null;
+});
+
+// 监听策略选择变化
+watch(() => form.strategyId, (newId) => {
+  if (newId && selectedStrategy.value?.parameters) {
+    // 如果策略有预定义参数，可以自动填充
+    if (selectedStrategy.value.parameters.length > 0) {
+      const params: Record<string, any> = {};
+      selectedStrategy.value.parameters.forEach(p => {
+        params[p.name] = p.default;
+      });
+      form.parametersJson = JSON.stringify(params, null, 2);
+    }
+  }
+});
 
 // 计算统计数据
 const runningCount = computed(() => instances.value.filter(i => i.status === 'Running').length);
@@ -433,9 +482,37 @@ const loadInstances = async () => {
   }
 };
 
+// 加载策略列表
+const loadStrategies = async () => {
+  const userId = userStore.user?.id;
+  if (!userId) {
+    ElMessage.error('请先登录');
+    return;
+  }
+
+  try {
+    const data = await strategyApi.list(userId);
+    console.log('Loaded strategies:', data);
+    // 显示所有策略，包括草稿
+    strategies.value = data;
+    if (data.length === 0) {
+      console.warn('No strategies found for user:', userId);
+    }
+  } catch (error) {
+    console.error('Failed to load strategies:', error);
+    ElMessage.error('加载策略列表失败: ' + (error as Error).message);
+  }
+};
+
 // 启动策略实例
 const startInstance = async () => {
   if (!formRef.value) return;
+
+  // 检查用户是否已登录
+  if (!userStore.user?.id) {
+    ElMessage.error('用户未登录，请先登录');
+    return;
+  }
 
   await formRef.value.validate(async (valid) => {
     if (!valid) return;
@@ -451,15 +528,24 @@ const startInstance = async () => {
         return;
       }
 
+      // 使用选中的策略创建配置
+      const strategy = selectedStrategy.value;
+      if (!strategy) {
+        ElMessage.error('请选择策略');
+        starting.value = false;
+        return;
+      }
+
       const config: StrategyConfig = {
-        name: form.name,
-        code: form.code,
+        id: strategy.id,
+        name: strategy.name,
+        code: strategy.code,
         parameters,
         symbols: form.symbols,
         timeframes: form.timeframes,
       };
 
-      const instanceId = await strategyEngineApi.start(config);
+      const instanceId = await strategyEngineApi.start(userStore.user?.id || '', config);
       ElMessage.success(`策略实例已启动: ${instanceId}`);
       showStartDialog.value = false;
       resetForm();
@@ -520,12 +606,43 @@ const viewInstance = (_id: string) => {
 
 // 重置表单
 const resetForm = () => {
-  form.name = '';
-  form.code = '';
+  form.strategyId = '';
   form.parametersJson = '{}';
   form.symbols = [];
   form.timeframes = [];
   formRef.value?.resetFields();
+};
+
+// 辅助函数
+const getCategoryText = (category: string) => {
+  const categoryMap: Record<string, string> = {
+    trend: '趋势跟踪',
+    mean_reversion: '均值回归',
+    arbitrage: '套利',
+    grid: '网格交易',
+    high_frequency: '高频交易',
+  };
+  return categoryMap[category] || category;
+};
+
+const getStrategyStatusType = (status: string) => {
+  const typeMap: Record<string, any> = {
+    draft: 'info',
+    testing: 'warning',
+    active: 'success',
+    archived: 'info',
+  };
+  return typeMap[status] || 'info';
+};
+
+const getStrategyStatusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    draft: '草稿',
+    testing: '测试中',
+    active: '已激活',
+    archived: '已归档',
+  };
+  return statusMap[status] || status;
 };
 
 // 获取状态文本
@@ -563,6 +680,7 @@ const formatRuntime = (startTime?: string) => {
 
 onMounted(() => {
   loadInstances();
+  loadStrategies();
   // 每5秒刷新一次实例列表
   refreshInterval = window.setInterval(() => {
     loadInstances();
@@ -948,5 +1066,52 @@ onUnmounted(() => {
   color: #909399;
   margin-top: 4px;
   line-height: 1.4;
+}
+
+// 策略预览
+.strategy-preview {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #303133;
+  }
+
+  .preview-code {
+    background: #2c3e50;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+
+    pre {
+      margin: 0;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #a9b7c6;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  }
+
+  .preview-description {
+    font-size: 12px;
+    color: #606266;
+    line-height: 1.5;
+    padding: 8px;
+    background: #fff;
+    border-radius: 6px;
+    border-left: 3px solid #409eff;
+  }
 }
 </style>

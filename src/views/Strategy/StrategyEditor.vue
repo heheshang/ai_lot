@@ -346,7 +346,13 @@
     </el-dialog>
 
     <!-- 代码模板对话框 -->
-    <el-dialog v-model="showTemplates" title="策略模板" width="600px">
+    <el-dialog
+      v-model="showTemplates"
+      title="策略模板"
+      width="600px"
+      :close-on-click-modal="true"
+      :close-on-press-escape="true"
+    >
       <div class="templates-list">
         <div
           v-for="template in strategyTemplates"
@@ -366,6 +372,9 @@
           <el-icon class="template-arrow"><ArrowRight /></el-icon>
         </div>
       </div>
+      <template #footer>
+        <el-button @click="showTemplates = false">取消</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
