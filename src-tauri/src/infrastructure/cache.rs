@@ -141,7 +141,7 @@ where
 
 /// Global cache instances using lazy_static
 mod global_caches {
-    use super::*;
+    // Cache key and value types defined locally
 
     /// Ticker cache - 5 second TTL
     pub struct TickerCacheKey {

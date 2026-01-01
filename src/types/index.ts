@@ -39,7 +39,41 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   user: User;
-  token: string;
+  /// JWT 访问令牌 (24小时有效)
+  access_token: string;
+  /// JWT 刷新令牌 (7天有效)
+  refresh_token: string;
+  /// 令牌类型
+  token_type: string;
+  /// 过期时间（秒）
+  expires_in: number;
+}
+
+/**
+ * 刷新令牌请求
+ */
+export interface RefreshTokenRequest {
+  refresh_token: string;
+}
+
+/**
+ * 刷新令牌响应
+ */
+export interface RefreshTokenResponse {
+  /// 新的访问令牌
+  access_token: string;
+  /// 过期时间（秒）
+  expires_in: number;
+}
+
+/**
+ * 令牌信息
+ */
+export interface TokenInfo {
+  user_id: string;
+  username: string;
+  role: string;
+  expires_at: number;
 }
 
 // ============== 用户资料类型 ==============
@@ -329,3 +363,29 @@ export * from './risk';
 
 // ============== 导出配置类型 ==============
 export * from './config';
+
+// ============== 审计日志类型 ==============
+export enum AuditEventType {
+  USER_LOGIN = 'UserLogin',
+  USER_LOGOUT = 'UserLogout',
+  STRATEGY_CREATED = 'StrategyCreated',
+  STRATEGY_UPDATED = 'StrategyUpdated',
+  STRATEGY_DELETED = 'StrategyDeleted',
+  ORDER_PLACED = 'OrderPlaced',
+  RISK_ALERT_TRIGGERED = 'RiskAlertTriggered',
+  SYSTEM_STARTED = 'SystemStarted',
+}
+
+export interface AuditLog {
+  id: string;
+  event_type: string;
+  event_data: string;
+  user_id: string | null;
+  timestamp: number;
+}
+
+export interface AuditFilter {
+  event_types?: string[];
+  user_id?: string;
+  limit?: number;
+}

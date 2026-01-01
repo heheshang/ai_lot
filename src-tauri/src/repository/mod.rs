@@ -16,9 +16,11 @@ pub mod strategy_repo;
 pub mod strategy_instance_repo;
 pub mod risk_alert_repo;
 pub mod exchange_repo;
+pub mod risk_rule_repo;
 
 pub use user_repo::UserRepository;
 pub use strategy_repo::StrategyRepository;
 pub use strategy_instance_repo::StrategyInstanceRepository;
 pub use risk_alert_repo::RiskAlertRepository;
 pub use exchange_repo::ExchangeRepository;
+pub use risk_rule_repo::{RiskRuleRepository, RiskRule, RiskRuleParams};

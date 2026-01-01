@@ -24,6 +24,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
             // 获取数据目录
             let data_dir = app
@@ -139,7 +140,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::user::login,
+            commands::user::logout,
             commands::user::get_current_user,
+            commands::user::refresh_access_token,
+            commands::user::verify_token,
+            commands::audit::get_audit_logs,
+            commands::audit::audit_export_csv,
             commands::market::market_subscribe_ticker,
             commands::market::market_get_klines,
             commands::market::market_get_symbols,

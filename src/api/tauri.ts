@@ -2,6 +2,9 @@ import { invoke as tauriInvoke } from '@tauri-apps/api/core';
 import type {
   LoginRequest,
   LoginResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
+  TokenInfo,
   User,
   Kline,
   Strategy,
@@ -12,28 +15,54 @@ import type {
 } from '@/types';
 
 /**
- * 调用 Tauri 命令的通用方法
+ * 统一的 API 响应格式
+ */
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+    details?: string;
+  };
+  request_id?: string;
+  timestamp?: number;
+}
+
+/**
+ * 调用 Tauri 命令的通用方法（支持新的 ApiResponse 格式）
  */
 export async function invoke<T = any>(
   cmd: string,
   args?: Record<string, any>
 ): Promise<T> {
   try {
-    const response = await tauriInvoke<any>('cmd_' + cmd, args ? { payload: args } : {});
+    console.log(`[invoke] Calling command: ${cmd}`, args);
+    const response = await tauriInvoke<ApiResponse<T>>(cmd, args);
+    console.log(`[invoke] Raw response from ${cmd}:`, response);
 
-    if (response.success === false) {
-      throw new Error(response.error || 'Operation failed');
+    // 处理新的 ApiResponse 格式
+    if (response && typeof response === 'object' && 'success' in response) {
+      if (!response.success) {
+        const error = response.error;
+        console.error(`[invoke] Command ${cmd} returned error:`, error);
+        throw new Error(error?.message || 'Operation failed');
+      }
+      console.log(`[invoke] Command ${cmd} success, data:`, response.data);
+      return response.data as T;
     }
 
-    return response.data as T;
+    // 兼容旧格式（直接返回数据）
+    console.log(`[invoke] Command ${cmd} returned legacy format`);
+    return response as T;
   } catch (error) {
-    // 处理旧版本命令格式（直接返回数据）
-    return tauriInvoke<any>(cmd, args) as Promise<T>;
+    console.error(`[invoke] Command ${cmd} failed:`, error);
+    throw error;
   }
 }
 
 /**
- * 直接调用 Tauri 命令（不包装 ApiResponse）
+ * 直接调用 Tauri 命令（兼容旧格式）
  */
 export async function invokeRaw<T = any>(
   cmd: string,
@@ -64,13 +93,31 @@ export const userApi = {
    * 用户登录
    */
   login: (request: LoginRequest) =>
-    invokeRaw<LoginResponse>('login', { request }),
+    invoke<LoginResponse>('login', { request }),
+
+  /**
+   * 用户退出登录
+   */
+  logout: (request: { user_id: string; username: string }) =>
+    invoke<void>('logout', { request }),
 
   /**
    * 获取当前用户
    */
   getCurrentUser: (userId: string) =>
-    invokeRaw<User>('get_current_user', { userId }),
+    invoke<User>('get_current_user', { userId }),
+
+  /**
+   * 刷新访问令牌
+   */
+  refreshAccessToken: (request: RefreshTokenRequest) =>
+    invoke<RefreshTokenResponse>('refresh_access_token', { request }),
+
+  /**
+   * 验证令牌
+   */
+  verifyToken: (token: string) =>
+    invoke<TokenInfo>('verify_token', { token }),
 };
 
 // ============== 行情 API ==============
@@ -743,4 +790,21 @@ export const emergencyApi = {
    */
   stop: () =>
     invokeRaw<void>('emergency_stop'),
+};
+
+// ============== Audit API ==============
+import type { AuditLog, AuditFilter } from '@/types';
+
+export const auditApi = {
+  /**
+   * 获取审计日志列表
+   */
+  getLogs: (filter?: AuditFilter) =>
+    invoke<AuditLog[]>('get_audit_logs', { filter }),
+
+  /**
+   * 导出审计日志为 CSV
+   */
+  exportToCsv: (filter?: AuditFilter) =>
+    invoke<string>('audit_export_csv', { filter }),
 };

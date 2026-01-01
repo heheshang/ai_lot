@@ -409,7 +409,7 @@ impl PerformanceTimer {
 }
 
 /// Get global debug context for a strategy instance
-pub fn get_debug_context(instance_id: &str) -> DebugContext {
+pub fn get_debug_context(_instance_id: &str) -> DebugContext {
     // TODO: Implement per-instance context caching
     DebugContext::new()
 }

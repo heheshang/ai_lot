@@ -149,7 +149,7 @@ impl RiskRule for DailyLossLimitRule {
         }
 
         // Get current daily loss
-        let daily_loss = self.get_daily_loss(&context.instance_id);
+        let _daily_loss = self.get_daily_loss(&context.instance_id);
 
         // Add current day's P&L (negative value means loss)
         let current_day_pnl = context.today_pnl;

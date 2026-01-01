@@ -1,3 +1,4 @@
+pub mod audit;
 pub mod market;
 pub mod user;
 pub mod strategy;
@@ -14,6 +15,10 @@ pub mod exchange;
 pub mod backtest;
 
 // 只导出命令函数
+pub use audit::{
+    get_audit_logs,
+    audit_export_csv,
+};
 pub use market::{
     market_subscribe_ticker,
     market_get_klines,
@@ -21,7 +26,7 @@ pub use market::{
     market_get_status,
     market_unsubscribe_ticker,
 };
-pub use user::{login, get_current_user};
+pub use user::{login, logout, get_current_user, refresh_access_token, verify_token};
 pub use strategy::{
     strategy_list,
     strategy_get,
@@ -96,6 +101,7 @@ pub use exchange::{
     exchange_update,
     exchange_list,
     exchange_get,
+    exchange_get_detail,
     exchange_delete,
     exchange_update_status,
 };

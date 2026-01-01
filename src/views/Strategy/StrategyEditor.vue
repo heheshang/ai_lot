@@ -352,6 +352,8 @@
       width="600px"
       :close-on-click-modal="true"
       :close-on-press-escape="true"
+      @close="handleCloseTemplates"
+      :before-close="handleBeforeCloseTemplates"
     >
       <div class="templates-list">
         <div
@@ -373,7 +375,7 @@
         </div>
       </div>
       <template #footer>
-        <el-button @click="showTemplates = false">取消</el-button>
+        <el-button @click="handleCloseTemplates">取消</el-button>
       </template>
     </el-dialog>
   </div>
@@ -832,6 +834,17 @@ function formatParametersPreview(): string {
   return `const parameters = {
 ${params}
 };`;
+}
+
+// 关闭模板对话框
+function handleCloseTemplates() {
+  showTemplates.value = false;
+}
+
+// 模板对话框关闭前处理
+function handleBeforeCloseTemplates(done: () => void) {
+  showTemplates.value = false;
+  done();
 }
 
 function applyTemplate(tpl: any) {

@@ -3,15 +3,8 @@
 //! Tauri commands for accessing strategy debug information including logs,
 //! variables, and performance metrics.
 
-use crate::core::strategy::{DebugContext, get_debug_context, LogLevel};
+use crate::core::strategy::{DebugContext, LogLevel};
 use crate::core::strategy::debug::{DebugLog, PerformanceMetrics};
-use tauri::State;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-
-/// In-memory debug context storage (simplified for now)
-/// In production, this should be per-instance and persisted
-type DebugContextStorage = Arc<RwLock<Option<DebugContext>>>;
 
 /// Get or create the global debug context
 fn get_global_debug() -> DebugContext {
@@ -29,7 +22,7 @@ fn get_global_debug() -> DebugContext {
 /// * `limit` - Optional maximum number of logs to return
 #[tauri::command]
 pub async fn get_strategy_logs(
-    instance_id: String,
+    _instance_id: String,
     min_level: Option<String>,
     since: Option<i64>,
     limit: Option<usize>,
@@ -59,7 +52,7 @@ pub async fn get_strategy_logs(
 /// Get performance metrics for a strategy instance
 #[tauri::command]
 pub async fn get_strategy_metrics(
-    instance_id: String,
+    _instance_id: String,
 ) -> Result<PerformanceMetrics, String> {
     let ctx = get_global_debug();
     Ok(ctx.get_metrics())
@@ -68,7 +61,7 @@ pub async fn get_strategy_metrics(
 /// Get monitored variables for a strategy instance
 #[tauri::command]
 pub async fn get_strategy_variables(
-    instance_id: String,
+    _instance_id: String,
 ) -> Result<std::collections::HashMap<String, crate::core::strategy::debug::DebugVariable>, String> {
     let ctx = get_global_debug();
     Ok(ctx.get_variables())
@@ -76,7 +69,7 @@ pub async fn get_strategy_variables(
 
 /// Clear debug logs for a strategy instance
 #[tauri::command]
-pub async fn clear_strategy_logs(instance_id: String) -> Result<(), String> {
+pub async fn clear_strategy_logs(_instance_id: String) -> Result<(), String> {
     let ctx = get_global_debug();
     ctx.clear_logs();
     Ok(())
@@ -85,7 +78,7 @@ pub async fn clear_strategy_logs(instance_id: String) -> Result<(), String> {
 /// Set the minimum log level for a strategy instance
 #[tauri::command]
 pub async fn set_strategy_log_level(
-    instance_id: String,
+    _instance_id: String,
     level: String,
 ) -> Result<(), String> {
     let log_level = level.parse::<LogLevel>().map_err(|e| e)?;
@@ -96,14 +89,14 @@ pub async fn set_strategy_log_level(
 
 /// Get the current log level for a strategy instance
 #[tauri::command]
-pub async fn get_strategy_log_level(instance_id: String) -> Result<String, String> {
+pub async fn get_strategy_log_level(_instance_id: String) -> Result<String, String> {
     let ctx = get_global_debug();
     Ok(ctx.get_min_log_level().to_string())
 }
 
 /// Test command to generate sample debug logs
 #[tauri::command]
-pub async fn generate_test_logs(instance_id: String) -> Result<(), String> {
+pub async fn generate_test_logs(_instance_id: String) -> Result<(), String> {
     let ctx = get_global_debug();
 
     ctx.debug("This is a debug message".to_string());

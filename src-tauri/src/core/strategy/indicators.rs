@@ -53,14 +53,6 @@ impl IndicatorCalculator {
         self.klines.iter().map(|k| k.close).collect()
     }
 
-    /// Get typical price (high + low + close) / 3
-    fn typical_prices(&self) -> Vec<f64> {
-        self.klines
-            .iter()
-            .map(|k| (k.high + k.low + k.close) / 3.0)
-            .collect()
-    }
-
     /// ==================== Trend Indicators ====================
 
     /// Simple Moving Average (SMA)
@@ -747,13 +739,14 @@ mod tests {
     #[test]
     fn test_macd() {
         let klines = create_test_klines();
+        let klines_len = klines.len();
         let calculator = IndicatorCalculator::new(klines);
 
         let macd = calculator.macd(2, 3, 2);
 
         // MACD result should have correct length
-        assert_eq!(macd.macd.len(), klines.len());
-        assert_eq!(macd.signal.len(), klines.len());
-        assert_eq!(macd.histogram.len(), klines.len());
+        assert_eq!(macd.macd.len(), klines_len);
+        assert_eq!(macd.signal.len(), klines_len);
+        assert_eq!(macd.histogram.len(), klines_len);
     }
 }

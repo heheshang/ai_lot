@@ -21,6 +21,7 @@ const AlertHistory = () => import('@/views/Risk/AlertHistory.vue');
 const Settings = () => import('@/views/settings/Settings.vue');
 const Exchange = () => import('@/views/settings/Exchange.vue');
 const Profile = () => import('@/views/settings/Profile.vue');
+const AuditLogs = () => import('@/views/admin/AuditLogs.vue');
 
 const routes: RouteRecordRaw[] = [
   {
@@ -119,6 +120,12 @@ const routes: RouteRecordRaw[] = [
         component: Profile,
         meta: { title: '个人资料' },
       },
+      {
+        path: 'admin/audit-logs',
+        name: 'AuditLogs',
+        component: AuditLogs,
+        meta: { title: '审计日志' },
+      },
     ],
   },
 ];
@@ -131,12 +138,16 @@ const router = createRouter({
 // 路由守卫 - 全局登录控制
 router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore();
-  const token = localStorage.getItem('token');
+
+  // 确保 store 已初始化
+  if (!userStore.isInitialized) {
+    await userStore.initFromStorage();
+  }
 
   // 如果页面不需要认证（如登录页），直接放行
   if (to.meta.requiresAuth === false) {
     // 如果已登录用户访问登录页，重定向到首页
-    if (to.name === 'Login' && userStore.user) {
+    if (to.name === 'Login' && userStore.isLoggedIn) {
       next({ name: 'Dashboard' });
     } else {
       next();
@@ -144,9 +155,9 @@ router.beforeEach(async (to, _from, next) => {
     return;
   }
 
-  // 需要认证的页面
-  if (!token) {
-    // 没有 token，跳转到登录页
+  // 需要认证的页面 - 使用 userStore.isLoggedIn 检查
+  if (!userStore.isLoggedIn) {
+    // 未登录，跳转到登录页，并记录原始目标路径
     next({
       name: 'Login',
       query: { redirect: to.fullPath }
@@ -154,8 +165,7 @@ router.beforeEach(async (to, _from, next) => {
     return;
   }
 
-  // 有 token 就放行，不需要额外检查 user 状态
-  // user 状态会在登录时设置，如果刷新页面会由 App.vue 初始化
+  // 已登录，放行
   next();
 });
 

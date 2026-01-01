@@ -8,7 +8,7 @@ pub mod logging;
 
 pub use database::Database;
 pub use crypto::CryptoService;
-pub use audit::{AuditLogger, AuditLogEntry};
+pub use audit::{AuditService, AuditEvent, AuditLog, AuditFilter};
 pub use notification::{
     NotificationService, DefaultNotificationService, DingTalkNotifier, EmailNotifier,
 };

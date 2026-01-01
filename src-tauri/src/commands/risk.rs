@@ -279,102 +279,58 @@ pub struct RiskRuleListItem {
     pub config: FrontendRiskRuleConfig,
 }
 
-/// In-memory storage for risk rule configurations
-///
-/// In production, this should be persisted to database.
-static mut RISK_RULES_STORAGE: Option<Vec<StoredRiskRule>> = None;
-
-/// Stored risk rule with configuration
-#[derive(Debug, Clone)]
-struct StoredRiskRule {
-    name: String,
-    display_name: String,
-    description: String,
-    rule_type: String,
-    config: FrontendRiskRuleConfig,
-}
-
-/// Initialize default risk rules
-fn init_risk_rules_storage() {
-    unsafe {
-        if RISK_RULES_STORAGE.is_none() {
-            RISK_RULES_STORAGE = Some(vec![
-                StoredRiskRule {
-                    name: "position_limit".to_string(),
-                    display_name: "仓位限制规则".to_string(),
-                    description: "限制单个仓位和总仓位的大小，控制单方向持仓比例".to_string(),
-                    rule_type: "position_limit".to_string(),
-                    config: FrontendRiskRuleConfig {
-                        enabled: true,
-                        action: "warning".to_string(),
-                        notify_methods: vec!["dingtalk".to_string()],
-                        params: {
-                            let mut map = HashMap::new();
-                            map.insert("max_position_value".to_string(), 10000.0);
-                            map.insert("max_total_value".to_string(), 50000.0);
-                            map.insert("max_direction_ratio".to_string(), 0.7);
-                            map
-                        },
-                    },
-                },
-                StoredRiskRule {
-                    name: "drawdown_limit".to_string(),
-                    display_name: "回撤限制规则".to_string(),
-                    description: "监控权益回撤，当回撤超过阈值时触发保护动作".to_string(),
-                    rule_type: "drawdown_limit".to_string(),
-                    config: FrontendRiskRuleConfig {
-                        enabled: true,
-                        action: "emergency_close".to_string(),
-                        notify_methods: vec!["dingtalk".to_string(), "email".to_string()],
-                        params: {
-                            let mut map = HashMap::new();
-                            map.insert("max_drawdown_pct".to_string(), 15.0);
-                            map
-                        },
-                    },
-                },
-            ]);
-        }
-    }
-}
-
-/// Get all risk rule configurations
+/// Get all risk rule configurations from database
 ///
 /// Returns a list of all available risk rules with their current configurations.
 #[tauri::command]
-pub async fn get_risk_rules() -> Result<Vec<RiskRuleListItem>, String> {
-    init_risk_rules_storage();
+pub async fn get_risk_rules(
+    db: State<'_, Database>,
+) -> Result<Vec<RiskRuleListItem>, String> {
+    let repo = db.risk_rule_repo();
+    let rules = repo.find_all()
+        .await
+        .map_err(|e| format!("Failed to fetch risk rules: {}", e))?;
 
-    unsafe {
-        let rules = RISK_RULES_STORAGE.as_ref().ok_or("Failed to initialize risk rules")?;
+    let frontend_rules: Vec<RiskRuleListItem> = rules
+        .into_iter()
+        .map(|rule| {
+            let params = rule.get_params()
+                .map_err(|e| format!("Failed to parse params: {}", e))
+                .unwrap_or_default();
 
-        let frontend_rules: Vec<RiskRuleListItem> = rules
-            .iter()
-            .map(|rule| RiskRuleListItem {
-                name: rule.name.clone(),
-                display_name: rule.display_name.clone(),
-                description: rule.description.clone(),
-                rule_type: rule.rule_type.clone(),
-                config: rule.config.clone(),
-            })
-            .collect();
+            let notify_methods = rule.get_notify_methods()
+                .map_err(|e| format!("Failed to parse notify methods: {}", e))
+                .unwrap_or_default();
 
-        Ok(frontend_rules)
-    }
+            RiskRuleListItem {
+                name: rule.name,
+                display_name: rule.display_name,
+                description: rule.description,
+                rule_type: rule.rule_type,
+                config: FrontendRiskRuleConfig {
+                    enabled: rule.enabled,
+                    action: rule.action,
+                    notify_methods,
+                    params,
+                },
+            }
+        })
+        .collect();
+
+    Ok(frontend_rules)
 }
 
-/// Update a single risk rule configuration
+/// Update a single risk rule configuration in database
 ///
 /// # Arguments
 /// * `rule_name` - The name of the rule to update (e.g., "position_limit", "drawdown_limit")
 /// * `config` - The new configuration to apply
 #[tauri::command]
 pub async fn update_risk_rule(
+    db: State<'_, Database>,
     rule_name: String,
     config: FrontendRiskRuleConfig,
 ) -> Result<(), String> {
-    init_risk_rules_storage();
-
     // Validate action
     if !["warning", "stop_strategy", "emergency_close"].contains(&config.action.as_str()) {
         return Err(format!("Invalid action: {}", config.action));
@@ -383,24 +339,23 @@ pub async fn update_risk_rule(
     // Validate parameters based on rule type
     validate_rule_params(&rule_name, &config.params)?;
 
-    unsafe {
-        let rules = RISK_RULES_STORAGE.as_mut().ok_or("Failed to initialize risk rules")?;
+    let repo = db.risk_rule_repo();
+    repo.update(
+        &rule_name,
+        config.enabled,
+        &config.action,
+        &config.notify_methods,
+        &config.params,
+    )
+    .await
+    .map_err(|e| format!("Failed to update risk rule: {}", e))?;
 
-        let rule = rules
-            .iter_mut()
-            .find(|r| r.name == rule_name)
-            .ok_or(format!("Rule not found: {}", rule_name))?;
-
-        // Update configuration
-        rule.config = config.clone();
-
-        log::info!(
-            "Updated risk rule: {} (enabled: {}, action: {})",
-            rule_name,
-            config.enabled,
-            config.action
-        );
-    }
+    log::info!(
+        "Updated risk rule: {} (enabled: {}, action: {})",
+        rule_name,
+        config.enabled,
+        config.action
+    );
 
     Ok(())
 }

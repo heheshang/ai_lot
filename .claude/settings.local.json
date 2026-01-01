@@ -18,7 +18,6 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(git commit:*)",
-      "Bash(ls -la \"D:\\\\soft\\\\workspace\\\\ai\\\\ai-lot\\\\src-tauri\\\\src\" 2>/dev/null || echo \"No such directory\")",
       "Bash(dir:*)",
       "Bash(npm run build)",
       "Bash(bun add:*)",
@@ -44,11 +43,10 @@
       "mcp__web-reader__webReader",
       "Bash(npm run dev)",
       "Bash(sqlite3:*)",
-      "Bash(powershell -Command \"Set-Location ''D:\\\\soft\\\\workspace\\\\ai\\\\ai-lot\\\\src-tauri''; cargo check\")",
-      "Bash(powershell -Command \"Set-Location ''D:\\\\soft\\\\workspace\\\\ai\\\\ai-lot\\\\src-tauri''; cargo check 2>&1 | Select-String -Pattern ''error|Finished'' -Context 0,2\")",
-      "Bash(powershell -Command \"Set-Location ''D:\\\\soft\\\\workspace\\\\ai\\\\ai-lot\\\\src-tauri''; cargo check 2>&1 | Select-String -Pattern ''error|Finished|warning:.*timestamp'' -Context 0,1\")",
-      "Bash(powershell -Command \"Set-Location ''D:\\\\soft\\\\workspace\\\\ai\\\\ai-lot\\\\src-tauri''; cargo check 2>&1 | Select-String -Pattern ''error|Finished'' -Context 0,1\")",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: comprehensive platform improvements - logging, UI/UX, and risk management\n\n- feat\\(strategy\\): enhance strategy engine with detailed logging and instance stats\n  - Add comprehensive logging throughout strategy lifecycle\n  - Add InstanceStats with trade count and P&L tracking\n  - Improve InstanceStatus serialization with proper serde attributes\n  - Use try_read in list_instances to prevent deadlocks\n  \n- feat\\(risk\\): update test cases to use LogOnly risk action\n  - Modify consecutive_loss, daily_loss, and volatility_limit tests\n  - Use RiskAction::LogOnly for cleaner test output\n  \n- feat\\(api\\): add debug logging to Tauri API invocations\n  - Log command calls, success, and failures for better debugging\n  \n- feat\\(ui\\): enhance UI/UX with improved design system\n  - Add enhanced shadow system \\($shadow-1 through $shadow-4\\)\n  - Add animation curves \\($ease-out-quart, $ease-out-expo, etc.\\)\n  - Improve BacktestView with step indicator and better layout\n  - Add title-icon wrapper for consistent icon styling\n  \n- feat\\(types\\): add user profile and preference types\n  - Add UserProfile, UserPreferences interfaces\n  - Add UpdateProfileRequest and ChangePasswordRequest\n  \n- feat\\(router\\): add Profile page route\n  - Import and configure Profile component in settings\n\n- feat\\(components\\): add common components directory\n  - Add reusable UI components infrastructure\n\n- docs: add UI/UX optimization plan documentation\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")"
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(rm:*)",
+      "Bash(cargo fix:*)",
+      "Bash(lsof:*)"
     ]
   },
   "enabledPlugins": {
@@ -57,6 +55,7 @@
     "typescript-lsp@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "commit-commands@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true
+    "frontend-design@claude-plugins-official": true,
+    "claude-mem@thedotmack": true
   }
 }

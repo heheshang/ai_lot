@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import type { ElTable } from 'element-plus';
 
 export interface TableColumn {
@@ -166,15 +166,16 @@ const props = withDefaults(defineProps<Props>(), {
   actionsAlign: 'center',
 });
 
-const emit = defineEmits<{
-  'sort-change': [sort: { column: any; prop: string; order: string }];
-  'selection-change': [selection: any[]];
-  'row-click': [row: any; column: any; event: Event];
-  'update:currentPage': [page: number];
-  'update:pageSize': [size: number];
-  'page-change': [page: number];
-  'size-change': [size: number];
-}>();
+// Define emits using runtime declaration
+const emit = defineEmits([
+  'sort-change',
+  'selection-change',
+  'row-click',
+  'update:currentPage',
+  'update:pageSize',
+  'page-change',
+  'size-change',
+]);
 
 const tableRef = ref<InstanceType<typeof ElTable>>();
 const currentPage = ref(1);

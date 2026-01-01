@@ -410,7 +410,7 @@
             <!-- Background elements -->
             <rect x="15" y="115" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.6"/>
             <rect x="55" y="55" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.8"/>
-            <rect"="95" y="70" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.7"/>
+            <rect x="95" y="70" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.7"/>
             <rect x="135" y="50" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.9"/>
             <defs>
               <linearGradient id="chartGrad" x1="0%" y1="0%" x2="200%" y2="0%">

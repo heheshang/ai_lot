@@ -1,7 +1,9 @@
 use crate::models::UserWithRole;
 
 pub mod permission;
+pub mod jwt;
 pub use permission::*;
+pub use jwt::{JwtManager, JwtConfig, Claims, generate_access_token, generate_refresh_token, verify_token, refresh_access_token};
 
 /// 权限检查服务
 pub struct AuthService;

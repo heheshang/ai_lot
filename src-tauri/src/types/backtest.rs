@@ -3,7 +3,7 @@
 //! Type definitions for backtesting functionality
 
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 
 /// Backtest configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

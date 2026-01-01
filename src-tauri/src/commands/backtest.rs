@@ -72,8 +72,8 @@ pub async fn backtest_run(
 /// Delete a backtest job
 #[tauri::command]
 pub async fn backtest_delete_job(
-    backtest_service: State<'_, Arc<BacktestService>>,
-    job_id: String,
+    _backtest_service: State<'_, Arc<BacktestService>>,
+    _job_id: String,
 ) -> Result<(), String> {
     // TODO: Implement delete in BacktestService
     Ok(())

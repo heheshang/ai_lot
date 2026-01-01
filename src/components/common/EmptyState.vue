@@ -61,7 +61,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Plus, Refresh, Search, Download } from '@element-plus/icons-vue';
+import { Plus } from '@element-plus/icons-vue';
 
 interface Props {
   type?: 'default' | 'search' | 'error' | 'warning' | 'folder' | 'network' | 'data' | 'custom';

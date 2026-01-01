@@ -76,6 +76,8 @@ struct RunningInstance {
     executor: ScriptExecutor,
     event_bus: Arc<EventBus>,
     exchange: Arc<dyn Exchange>,
+    /// User ID who owns this strategy instance
+    #[allow(dead_code)]
     user_id: String,
     instance_repo: Arc<StrategyInstanceRepository>,
     shutdown_tx: Option<broadcast::Sender<()>>,

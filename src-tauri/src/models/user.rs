@@ -29,11 +29,16 @@ pub struct Role {
 pub struct UserWithRole {
     pub id: String,
     pub username: String,
+    #[serde(rename = "displayName")]
     pub display_name: Option<String>,
+    #[serde(rename = "roleId")]
     pub role_id: String,
+    #[serde(rename = "roleName")]
     pub role_name: String,
     pub status: String,
+    #[serde(rename = "createdAt")]
     pub created_at: i64,
+    #[serde(rename = "updatedAt")]
     pub updated_at: i64,
 }
 

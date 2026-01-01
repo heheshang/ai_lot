@@ -167,7 +167,7 @@ impl BacktestService {
 
             // Calculate indicators with all history up to this point
             let history = &klines[..=i];
-            let calculator = IndicatorCalculator::new(history.to_vec());
+            let _calculator = IndicatorCalculator::new(history.to_vec());
 
             // Execute strategy
             let signal = self.execute_strategy(&executor, &code, config, kline, history)?;
@@ -193,7 +193,7 @@ impl BacktestService {
     }
 
     /// Get strategy code from database
-    fn get_strategy_code(&self, strategy_id: &str) -> Result<String> {
+    fn get_strategy_code(&self, _strategy_id: &str) -> Result<String> {
         // For now, return mock code
         // TODO: Load from database
         Ok(r#"
@@ -297,7 +297,6 @@ function onStop(context) {}
                     state.total_fees += fee;
 
                     let position = BacktestPosition {
-                        entry_time: kline.timestamp,
                         entry_price: adjusted_price,
                         quantity: actual_quantity,
                         side: "buy".to_string(),
@@ -369,7 +368,7 @@ function onStop(context) {}
     }
 
     /// Check for stop loss / take profit exits
-    fn check_exits(&self, state: &mut BacktestState, kline: &Kline, config: &BacktestConfig) {
+    fn check_exits(&self, state: &mut BacktestState, kline: &Kline, _config: &BacktestConfig) {
         for position in &mut state.positions {
             if position.side != "buy" {
                 continue;
@@ -386,7 +385,7 @@ function onStop(context) {}
     }
 
     /// Close all positions at the end of backtest
-    fn close_all_positions(&self, state: &mut BacktestState, last_kline: &Kline) -> Result<()> {
+    fn close_all_positions(&self, state: &mut BacktestState, _last_kline: &Kline) -> Result<()> {
         for position in &state.positions {
             let value = position.entry_price * position.quantity;
             state.balance += value;
@@ -397,7 +396,7 @@ function onStop(context) {}
     }
 
     /// Calculate final backtest result
-    fn calculate_result(&self, config: &BacktestConfig, state: &BacktestState, klines: &[Kline]) -> Result<BacktestResult> {
+    fn calculate_result(&self, config: &BacktestConfig, state: &BacktestState, _klines: &[Kline]) -> Result<BacktestResult> {
         let final_capital = state.balance;
         let profit = final_capital - config.initial_capital;
         let total_return = (profit / config.initial_capital) * 100.0;
@@ -608,7 +607,6 @@ impl BacktestState {
 
 /// Backtest position
 struct BacktestPosition {
-    entry_time: i64,
     entry_price: f64,
     quantity: f64,
     side: String,

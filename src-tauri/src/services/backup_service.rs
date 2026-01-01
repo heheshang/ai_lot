@@ -8,7 +8,6 @@ use chrono::Utc;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use log::{error, info, warn};
-use sqlx::Row;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -532,7 +531,7 @@ fn parse_timestamp_from_filename(s: &str) -> Option<i64> {
         let naive = NaiveDate::from_ymd_opt(year, month, day)?
             .and_hms_opt(hour, minute, second)?;
 
-        Some(naive.timestamp())
+        Some(naive.and_utc().timestamp())
     } else {
         None
     }

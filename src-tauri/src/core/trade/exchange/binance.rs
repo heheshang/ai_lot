@@ -57,6 +57,11 @@ impl BinanceExchange {
     }
 
     /// Parse ticker data from Binance WebSocket 24hrTicker event
+    ///
+    /// # Note
+    /// This method is reserved for future WebSocket implementation.
+    /// Currently not exposed through the Exchange trait.
+    #[allow(dead_code)]
     fn parse_ticker(&self, json: &Value) -> Result<Ticker> {
         Ok(Ticker {
             symbol: json["s"].as_str().unwrap_or("").to_string(),
@@ -71,6 +76,10 @@ impl BinanceExchange {
     }
 
     /// Parse kline data from Binance WebSocket kline event
+    ///
+    /// # Note
+    /// This method is reserved for future WebSocket implementation.
+    #[allow(dead_code)]
     fn parse_kline(&self, json: &Value, interval: Interval) -> Result<Kline> {
         let k = &json["k"];
         Ok(Kline {
@@ -87,6 +96,10 @@ impl BinanceExchange {
     }
 
     /// WebSocket message loop for combined streams
+    ///
+    /// # Note
+    /// Reserved for future WebSocket streaming implementation.
+    #[allow(dead_code)]
     async fn ws_loop(&self, streams: String, interval: Option<Interval>) -> Result<()> {
         let url = format!("{}/{}", WS_API_BASE, streams);
         log::info!("Connecting to WebSocket: {}", url);
@@ -339,6 +352,10 @@ impl BinanceExchange {
     }
 
     /// 保持 listenKey 活跃（每30分钟调用一次）
+    ///
+    /// # Note
+    /// Reserved for future user data stream implementation.
+    #[allow(dead_code)]
     async fn keepalive_listen_key(&self) -> Result<()> {
         let client = self.rest_client()?;
         let guard = self.listen_key.lock().await;
@@ -353,6 +370,10 @@ impl BinanceExchange {
     }
 
     /// 用户数据流 WebSocket 循环
+    ///
+    /// # Note
+    /// Reserved for future user data stream implementation.
+    #[allow(dead_code)]
     async fn user_data_stream_loop(&self) -> Result<()> {
         let listen_key = {
             let guard = self.listen_key.lock().await;
@@ -444,6 +465,10 @@ impl BinanceExchange {
     }
 
     /// 解析执行报告事件
+    ///
+    /// # Note
+    /// Reserved for future order event parsing.
+    #[allow(dead_code)]
     fn parse_execution_report(&self, json: &Value) -> Result<Order> {
         Self::parse_execution_report_static(json)
     }

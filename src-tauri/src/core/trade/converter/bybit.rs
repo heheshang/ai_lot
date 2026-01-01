@@ -103,7 +103,7 @@ impl MarketDataConverter for BybitConverter {
         }
 
         // Single candle format (from WebSocket)
-        let start = helpers::get_field(result, "start");
+        let _start = helpers::get_field(result, "start");
         Ok(Kline {
             symbol: self.normalize_symbol(
                 helpers::parse_str(raw.get("symbol").unwrap_or(&Value::Null), "symbol")?.as_str()

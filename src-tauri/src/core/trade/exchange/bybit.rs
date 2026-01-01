@@ -21,6 +21,12 @@ use futures_util::{StreamExt, SinkExt};
 
 const REST_API_BASE: &str = "https://api.bybit.com";
 const WS_API_PUBLIC: &str = "wss://stream.bybit.com/v5/public/spot";
+
+/// Private WebSocket API endpoint
+///
+/// # Note
+/// Reserved for future private WebSocket streaming implementation.
+#[allow(dead_code)]
 const WS_API_PRIVATE: &str = "wss://stream.bybit.com/v5/private";
 
 /// Bybit-specific error codes
@@ -91,6 +97,10 @@ impl BybitClient {
     }
 
     /// Make authenticated GET request
+    ///
+    /// # Note
+    /// Reserved for future authenticated API requests.
+    #[allow(dead_code)]
     async fn get_signed(&self, path: &str, params: &str) -> Result<Value> {
         let timestamp = chrono::Utc::now().timestamp_millis().to_string();
         let sign = self.sign_request(&timestamp, params);
@@ -308,6 +318,10 @@ impl BybitExchange {
     }
 
     /// Static helper to parse order state
+    ///
+    /// # Note
+    /// Reserved for future order processing.
+    #[allow(dead_code)]
     fn parse_order_state_static(state: &str) -> OrderState {
         match state {
             "New" | "PartiallyFilled" => OrderState::Open,
@@ -377,6 +391,10 @@ impl BybitExchange {
     }
 
     /// Parse WebSocket order message
+    ///
+    /// # Note
+    /// Reserved for future WebSocket order streaming.
+    #[allow(dead_code)]
     fn parse_ws_order_from_value(data: &Value) -> Result<Order> {
         let symbol = data["symbol"].as_str().unwrap_or("");
         let symbol = Self::normalize_symbol_static(symbol);
@@ -408,6 +426,10 @@ impl BybitExchange {
     }
 
     /// Start public WebSocket for tickers and klines
+    ///
+    /// # Note
+    /// Reserved for future WebSocket streaming implementation.
+    #[allow(dead_code)]
     async fn ws_public_loop(&self, channels: Vec<String>, interval: Option<Interval>) -> Result<()> {
         Self::ws_public_loop_impl(
             &self.ticker_tx,
@@ -759,7 +781,7 @@ impl Exchange for BybitExchange {
         });
 
         let body_str = serde_json::to_string(&body)?;
-        let response = client.post_signed("/v5/order/query", &body_str).await?;
+        let _response = client.post_signed("/v5/order/query", &body_str).await?;
 
         // Parse response - need proper OrderRequest context
         todo!("Bybit get_order parsing - need context for symbol/side/price")
@@ -777,7 +799,7 @@ impl Exchange for BybitExchange {
         }
 
         let body_str = serde_json::to_string(&body)?;
-        let response = client.post_signed("/v5/order/open", &body_str).await?;
+        let _response = client.post_signed("/v5/order/open", &body_str).await?;
 
         // Parse response
         todo!("Bybit get_open_orders parsing")

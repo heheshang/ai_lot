@@ -5,8 +5,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
-use crate::repository::{UserRepository, StrategyRepository, StrategyInstanceRepository};
-use crate::infrastructure::audit::AuditLogger;
+use crate::repository::{UserRepository, StrategyRepository, StrategyInstanceRepository, RiskRuleRepository};
+use crate::infrastructure::audit::AuditService;
 use crate::core::EventBus;
 use crate::core::strategy::StrategyEngine;
 use crate::core::trade::exchange::binance::BinanceExchange;
@@ -144,9 +144,14 @@ impl Database {
         StrategyInstanceRepository::new(self.pool.clone())
     }
 
+    /// 获取 RiskRule Repository
+    pub fn risk_rule_repo(&self) -> RiskRuleRepository {
+        RiskRuleRepository::new(self.pool.clone())
+    }
+
     /// 获取审计日志记录器
-    pub fn audit_logger(&self) -> AuditLogger {
-        AuditLogger::new(self.pool.clone())
+    pub fn audit_logger(&self) -> Arc<AuditService> {
+        Arc::new(AuditService::from_pool(self.pool.clone()))
     }
 
     /// 获取 EventBus

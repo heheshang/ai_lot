@@ -32,7 +32,10 @@ impl Default for ConsecutiveLossLimitParams {
 }
 
 /// Trade outcome tracking
+///
+/// Reserved for future use in detailed trade analysis
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 struct TradeOutcome {
     pnl: f64,
     timestamp: i64,
@@ -181,7 +184,7 @@ impl RiskRule for ConsecutiveLossLimitRule {
 
         // Update count based on today's P&L
         // In a real implementation, this would track each trade individually
-        let count = self.get_consecutive_count(&context.instance_id);
+        let _count = self.get_consecutive_count(&context.instance_id);
 
         // Update with today's result
         if context.today_pnl < -self.params.min_loss_threshold {
@@ -193,7 +196,7 @@ impl RiskRule for ConsecutiveLossLimitRule {
                 // Mark as triggered
                 let mut data = self.consecutive_data.write().unwrap();
                 let now = Utc::now().timestamp();
-                if let Some((count, last_time, triggered)) = data.get_mut(&context.instance_id) {
+                if let Some((_count, _last_time, triggered)) = data.get_mut(&context.instance_id) {
                     if triggered.is_none() {
                         *triggered = Some(now);
                     }

@@ -135,7 +135,7 @@ impl ScriptExecutor {
         // 计算常用指标
         let sma_20 = indicator_calculator.sma(20);
         let ema_12 = indicator_calculator.ema(12);
-        let ema_26 = indicator_calculator.ema(26);
+        let _ema_26 = indicator_calculator.ema(26);
         let rsi_14 = indicator_calculator.rsi(14);
         let macd = indicator_calculator.macd(12, 26, 9);
         let bb = indicator_calculator.bollinger_bands(20, 2.0);

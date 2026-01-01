@@ -93,6 +93,10 @@ impl OkxClient {
     }
 
     /// Make authenticated GET request
+    ///
+    /// # Note
+    /// Reserved for future authenticated API endpoints.
+    #[allow(dead_code)]
     async fn get_signed(&self, path: &str) -> Result<Value> {
         let timestamp = chrono::Utc::now().timestamp_millis().to_string();
         let sign = self.sign_request(&timestamp, "GET", path, "");
@@ -142,6 +146,10 @@ impl OkxClient {
     }
 
     /// Make authenticated DELETE request
+    ///
+    /// # Note
+    /// Reserved for future DELETE API endpoints.
+    #[allow(dead_code)]
     async fn delete_signed(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
         let query_string = if params.is_empty() {
             String::new()
@@ -359,6 +367,10 @@ impl OkxExchange {
     }
 
     /// Start public WebSocket for tickers and klines
+    ///
+    /// # Note
+    /// Reserved for future WebSocket streaming implementation.
+    #[allow(dead_code)]
     async fn ws_public_loop(&self, channels: Vec<String>, interval: Option<Interval>) -> Result<()> {
         OkxExchange::ws_public_loop_impl(
             &self.ticker_tx,
@@ -388,6 +400,10 @@ impl OkxExchange {
     }
 
     /// Static helper for public WebSocket loop with both ticker and kline (used in spawned tasks)
+    ///
+    /// # Note
+    /// Reserved for future WebSocket streaming implementation.
+    #[allow(dead_code)]
     async fn ws_public_loop_helper(
         channels: Vec<String>,
         interval: Option<Interval>,
@@ -474,6 +490,10 @@ impl OkxExchange {
     }
 
     /// Start private WebSocket for user data (orders, account)
+    ///
+    /// # Note
+    /// Reserved for future user data stream implementation.
+    #[allow(dead_code)]
     async fn ws_private_loop(&self) -> Result<()> {
         OkxExchange::ws_private_loop_impl(
             &self.order_tx,
@@ -584,6 +604,10 @@ impl OkxExchange {
     }
 
     /// Parse WebSocket ticker message
+    ///
+    /// # Note
+    /// Reserved for future WebSocket ticker streaming.
+    #[allow(dead_code)]
     fn parse_ws_ticker(&self, data: &Value) -> Result<Ticker> {
         Self::parse_ws_ticker_static(data)
     }
@@ -606,6 +630,10 @@ impl OkxExchange {
     }
 
     /// Parse WebSocket kline message
+    ///
+    /// # Note
+    /// Reserved for future WebSocket kline streaming.
+    #[allow(dead_code)]
     fn parse_ws_kline(&self, data: &Value, interval: Interval) -> Result<Kline> {
         Self::parse_ws_kline_static(data, interval)
     }
@@ -633,6 +661,10 @@ impl OkxExchange {
     }
 
     /// Parse WebSocket order message
+    ///
+    /// # Note
+    /// Reserved for future WebSocket order streaming.
+    #[allow(dead_code)]
     fn parse_ws_order(&self, data: &Value) -> Result<Order> {
         Self::parse_ws_order_from_value(data)
     }
@@ -786,7 +818,7 @@ impl Exchange for OkxExchange {
         // Start WebSocket loop in background task
         let tx_ticker = self.ticker_tx.clone();
         let connection_state = self.connection_state.clone();
-        let okx_symbols_clone = okx_symbols.clone();
+        let _okx_symbols_clone = okx_symbols.clone();
 
         let handle = tokio::spawn(async move {
             log::info!("OKX ticker WebSocket task started");
@@ -988,7 +1020,7 @@ impl Exchange for OkxExchange {
         });
 
         let body_str = serde_json::to_string(&body)?;
-        let response = client.post_signed("/api/v5/trade/order", &body_str).await?;
+        let _response = client.post_signed("/api/v5/trade/order", &body_str).await?;
 
         // Parse response - need proper OrderRequest context
         // For now, return placeholder
@@ -1007,7 +1039,7 @@ impl Exchange for OkxExchange {
         };
 
         let body_str = serde_json::to_string(&body)?;
-        let response = client.post_signed("/api/v5/trade/orders-pending", &body_str).await?;
+        let _response = client.post_signed("/api/v5/trade/orders-pending", &body_str).await?;
 
         // Parse response
         // For now, return placeholder
@@ -1018,7 +1050,7 @@ impl Exchange for OkxExchange {
         let client = self.rest_client()?;
 
         let body = serde_json::json!({});
-        let body_str = serde_json::to_string(&body)?;
+        let _body_str = serde_json::to_string(&body)?;
         let response = client.get_signed("/api/v5/account/balance").await?;
 
         let data = response["data"][0]["details"].as_array()
