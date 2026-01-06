@@ -17,7 +17,7 @@ impl StrategyRepository {
     pub async fn find_by_user(&self, user_id: &str) -> Result<Vec<StrategyListItem>> {
         let strategies = sqlx::query_as::<_, StrategyListItem>(
             r#"
-            SELECT id, name, category, tags, version, status, updated_at
+            SELECT id, name, category, tags, version, status, created_at, updated_at
             FROM strategies
             WHERE user_id = ?
             ORDER BY updated_at DESC

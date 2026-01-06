@@ -339,8 +339,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import {
   Plus,
   Search,
@@ -364,6 +364,7 @@ import { useUserStore } from '@/store/modules/user';
 import type { Strategy } from '@/types';
 
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 
 // 状态
@@ -492,7 +493,14 @@ const getCategoryText = (category: string) => {
 };
 
 const formatDate = (timestamp: number) => {
+  // 验证时间戳有效性
+  if (!timestamp || timestamp <= 0) return '--';
+
   const date = new Date(timestamp * 1000);
+
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) return '--';
+
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -505,7 +513,15 @@ const formatDate = (timestamp: number) => {
 };
 
 const formatDateTime = (timestamp: number) => {
-  return new Date(timestamp * 1000).toLocaleString('zh-CN');
+  // 验证时间戳有效性
+  if (!timestamp || timestamp <= 0) return '--';
+
+  const date = new Date(timestamp * 1000);
+
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) return '--';
+
+  return date.toLocaleString('zh-CN');
 };
 
 const handleSearch = () => { currentPage.value = 1; };
@@ -599,6 +615,16 @@ const loadStrategies = async () => {
 };
 
 onMounted(() => { loadStrategies(); });
+
+// 监听路由变化，当从其他页面返回时刷新列表
+const previousPath = ref<string>('');
+watch(() => route.path, (newPath) => {
+  // 只在路径从其他页面切换回 /strategy 时刷新
+  if (newPath === '/strategy' && previousPath.value !== '/strategy') {
+    loadStrategies();
+  }
+  previousPath.value = newPath;
+});
 </script>
 
 <style scoped lang="scss">

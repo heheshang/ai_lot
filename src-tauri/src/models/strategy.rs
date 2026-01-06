@@ -78,6 +78,7 @@ pub struct StrategyListItem {
     pub tags: Option<String>,
     pub version: i32,
     pub status: String,
+    pub created_at: i64,
     pub updated_at: i64,
 }
 

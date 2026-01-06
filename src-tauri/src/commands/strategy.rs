@@ -49,7 +49,7 @@ pub async fn strategy_list(
                 version: item.version,
                 parent_id: None,
                 status: item.status,
-                created_at: 0,
+                created_at: item.created_at,
                 updated_at: item.updated_at,
             }
         })
@@ -138,6 +138,19 @@ pub async fn strategy_save(
         }
     }
 
+    // 从数据库重新获取策略以获得更新后的时间戳
+    let saved_strategy = match strategy_repo.find_by_id_dto(&dto.id).await {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            log::error!("[{}] Failed to retrieve saved strategy", request_id);
+            return Ok(ApiResponse::error(ApiError::database_error("无法获取保存的策略")));
+        }
+        Err(e) => {
+            log::error!("[{}] Database error: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::database_error(format!("获取保存的策略失败: {}", e))));
+        }
+    };
+
     // 记录审计日志
     let audit_service = db.audit_logger();
     let log_id = if is_update { &strategy_id } else { &dto.id };
@@ -161,7 +174,7 @@ pub async fn strategy_save(
 
     log::info!("[{}] Strategy saved successfully: {}", request_id, log_id);
 
-    Ok(ApiResponse::success(dto).with_request_id(request_id))
+    Ok(ApiResponse::success(saved_strategy).with_request_id(request_id))
 }
 
 /// 删除策略

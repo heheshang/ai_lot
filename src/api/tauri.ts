@@ -165,7 +165,7 @@ export const strategyApi = {
    * 获取策略详情
    */
   get: (id: string) =>
-    invokeRaw<Strategy | null>('strategy_get', { id }),
+    invoke<Strategy | null>('strategy_get', { id }),
 
   /**
    * 保存策略
