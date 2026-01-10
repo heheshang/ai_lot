@@ -2,6 +2,7 @@
 //!
 //! This module provides Tauri command handlers for managing exchange configurations.
 
+use crate::core::response::{ApiResponse, ApiError};
 use crate::models::exchange::{ExchangeConfig, ExchangeName};
 use crate::repository::ExchangeRepository;
 use serde::{Deserialize, Serialize};
@@ -83,24 +84,28 @@ pub async fn exchange_add(
     db: State<'_, crate::infrastructure::Database>,
     user_id: String,
     request: SaveExchangeRequest,
-) -> Result<ExchangeConfigResponse, String> {
+) -> Result<ApiResponse<ExchangeConfigResponse>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     log::info!(
-        "exchange_add called: user_id={}, exchange={}",
-        user_id,
-        request.exchange_name
+        "[{}] exchange_add called: user_id={}, exchange={}",
+        request_id, user_id, request.exchange_name
     );
 
     // Validate exchange name
-    let exchange_name = ExchangeName::from_str(&request.exchange_name)
-        .ok_or_else(|| format!("Unsupported exchange: {}", request.exchange_name))?;
+    let exchange_name = match ExchangeName::parse(&request.exchange_name) {
+        Some(name) => name,
+        None => {
+            return Ok(ApiResponse::error(ApiError::invalid_parameter("exchange_name")).with_request_id(request_id));
+        }
+    };
 
     // Validate required passphrase for OKX
     if exchange_name == ExchangeName::OKX && request.passphrase.is_none() {
-        return Err("OKX requires passphrase".to_string());
+        return Ok(ApiResponse::error(ApiError::validation_failed("passphrase", "OKX必须提供passphrase")).with_request_id(request_id));
     }
 
     // Create encrypted config
-    let config = ExchangeConfig::create_encrypted(
+    let config = match ExchangeConfig::create_encrypted(
         Uuid::new_v4().to_string(),
         user_id,
         request.exchange_name,
@@ -109,16 +114,23 @@ pub async fn exchange_add(
         &request.api_secret,
         request.passphrase.as_deref(),
         request.is_testnet.unwrap_or(false),
-    )
-    .map_err(|e| format!("Failed to create exchange config: {}", e))?;
+    ) {
+        Ok(config) => config,
+        Err(e) => {
+            log::error!("[{}] Failed to create exchange config: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("创建交易所配置失败")).with_request_id(request_id));
+        }
+    };
 
     // Save to database
     let repo = ExchangeRepository::new(db.pool.clone());
-    repo.create(&config)
-        .await
-        .map_err(|e| format!("Failed to save exchange config: {}", e))?;
+    if let Err(e) = repo.create(&config).await {
+        log::error!("[{}] Failed to save exchange config: {}", request_id, e);
+        return Ok(ApiResponse::error(ApiError::database_error(format!("保存失败: {}", e))).with_request_id(request_id));
+    }
 
-    Ok(config.into())
+    log::info!("[{}] Exchange config created successfully", request_id);
+    Ok(ApiResponse::success(config.into()).with_request_id(request_id))
 }
 
 /// Update an existing exchange configuration
@@ -127,24 +139,29 @@ pub async fn exchange_update(
     db: State<'_, crate::infrastructure::Database>,
     config_id: String,
     request: SaveExchangeRequest,
-) -> Result<ExchangeConfigResponse, String> {
+) -> Result<ApiResponse<ExchangeConfigResponse>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     log::info!(
-        "exchange_update called: config_id={}, exchange={}",
-        config_id,
-        request.exchange_name
+        "[{}] exchange_update called: config_id={}, exchange={}",
+        request_id, config_id, request.exchange_name
     );
 
     // Get existing config
     let repo = ExchangeRepository::new(db.pool.clone());
-    let mut config = repo
-        .find_by_id(&config_id)
-        .await
-        .map_err(|e| format!("Failed to find exchange config: {}", e))?
-        .ok_or_else(|| format!("Exchange config not found: {}", config_id))?;
+    let mut config = match repo.find_by_id(&config_id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => {
+            return Ok(ApiResponse::error(ApiError::not_found("交易所配置")).with_request_id(request_id));
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to find exchange config: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::database_error(format!("查询失败: {}", e))).with_request_id(request_id));
+        }
+    };
 
     // Validate passphrase for OKX
     if config.exchange_name == "okx" && request.passphrase.is_none() {
-        return Err("OKX requires passphrase".to_string());
+        return Ok(ApiResponse::error(ApiError::validation_failed("passphrase", "OKX必须提供passphrase")).with_request_id(request_id));
     }
 
     // Update config fields
@@ -152,20 +169,23 @@ pub async fn exchange_update(
     config.is_testnet = request.is_testnet.unwrap_or(false);
 
     // Update encrypted keys
-    config
-        .update_api_keys(
-            &request.api_key,
-            &request.api_secret,
-            request.passphrase.as_deref(),
-        )
-        .map_err(|e| format!("Failed to encrypt keys: {}", e))?;
+    if let Err(e) = config.update_api_keys(
+        &request.api_key,
+        &request.api_secret,
+        request.passphrase.as_deref(),
+    ) {
+        log::error!("[{}] Failed to encrypt keys: {}", request_id, e);
+        return Ok(ApiResponse::error(ApiError::operation_failed("加密密钥失败")).with_request_id(request_id));
+    }
 
     // Save to database
-    repo.update(&config)
-        .await
-        .map_err(|e| format!("Failed to update exchange config: {}", e))?;
+    if let Err(e) = repo.update(&config).await {
+        log::error!("[{}] Failed to update exchange config: {}", request_id, e);
+        return Ok(ApiResponse::error(ApiError::database_error(format!("更新失败: {}", e))).with_request_id(request_id));
+    }
 
-    Ok(config.into())
+    log::info!("[{}] Exchange config updated successfully", request_id);
+    Ok(ApiResponse::success(config.into()).with_request_id(request_id))
 }
 
 /// Get all exchange configurations for a user
@@ -173,16 +193,20 @@ pub async fn exchange_update(
 pub async fn exchange_list(
     db: State<'_, crate::infrastructure::Database>,
     user_id: String,
-) -> Result<Vec<ExchangeConfigResponse>, String> {
-    log::info!("exchange_list called: user_id={}", user_id);
+) -> Result<ApiResponse<Vec<ExchangeConfigResponse>>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    log::info!("[{}] exchange_list called: user_id={}", request_id, user_id);
 
     let repo = ExchangeRepository::new(db.pool.clone());
-    let configs = repo
-        .find_by_user(&user_id)
-        .await
-        .map_err(|e| format!("Failed to get exchange configs: {}", e))?;
+    let configs = match repo.find_by_user(&user_id).await {
+        Ok(configs) => configs,
+        Err(e) => {
+            log::error!("[{}] Failed to get exchange configs: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("查询交易所配置失败")).with_request_id(request_id));
+        }
+    };
 
-    Ok(configs.into_iter().map(|c| c.into()).collect())
+    Ok(ApiResponse::success(configs.into_iter().map(|c| c.into()).collect()).with_request_id(request_id))
 }
 
 /// Get exchange configuration by ID
@@ -190,17 +214,23 @@ pub async fn exchange_list(
 pub async fn exchange_get(
     db: State<'_, crate::infrastructure::Database>,
     config_id: String,
-) -> Result<ExchangeConfigResponse, String> {
-    log::info!("exchange_get called: config_id={}", config_id);
+) -> Result<ApiResponse<ExchangeConfigResponse>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    log::info!("[{}] exchange_get called: config_id={}", request_id, config_id);
 
     let repo = ExchangeRepository::new(db.pool.clone());
-    let config = repo
-        .find_by_id(&config_id)
-        .await
-        .map_err(|e| format!("Failed to get exchange config: {}", e))?
-        .ok_or_else(|| format!("Exchange config not found: {}", config_id))?;
+    let config = match repo.find_by_id(&config_id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => {
+            return Ok(ApiResponse::error(ApiError::not_found("交易所配置")).with_request_id(request_id));
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to get exchange config: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("查询交易所配置失败")).with_request_id(request_id));
+        }
+    };
 
-    Ok(config.into())
+    Ok(ApiResponse::success(config.into()).with_request_id(request_id))
 }
 
 /// Get exchange configuration with decrypted keys (for editing)
@@ -208,23 +238,39 @@ pub async fn exchange_get(
 pub async fn exchange_get_detail(
     db: State<'_, crate::infrastructure::Database>,
     config_id: String,
-) -> Result<ExchangeConfigDetailResponse, String> {
-    log::info!("exchange_get_detail called: config_id={}", config_id);
+) -> Result<ApiResponse<ExchangeConfigDetailResponse>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    log::info!("[{}] exchange_get_detail called: config_id={}", request_id, config_id);
 
     let repo = ExchangeRepository::new(db.pool.clone());
-    let config = repo
-        .find_by_id(&config_id)
-        .await
-        .map_err(|e| format!("Failed to get exchange config: {}", e))?
-        .ok_or_else(|| format!("Exchange config not found: {}", config_id))?;
+    let config = match repo.find_by_id(&config_id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => {
+            return Ok(ApiResponse::error(ApiError::not_found("交易所配置")).with_request_id(request_id));
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to get exchange config: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("查询交易所配置失败")).with_request_id(request_id));
+        }
+    };
 
     // Decrypt the keys
-    let (api_key, api_secret) = config.get_decrypted_keys()
-        .map_err(|e| format!("Failed to decrypt keys: {}", e))?;
-    let passphrase = config.get_decrypted_passphrase()
-        .map_err(|e| format!("Failed to decrypt passphrase: {}", e))?;
+    let (api_key, api_secret) = match config.get_decrypted_keys() {
+        Ok(keys) => keys,
+        Err(e) => {
+            log::error!("[{}] Failed to decrypt keys: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("解密密钥失败")).with_request_id(request_id));
+        }
+    };
+    let passphrase = match config.get_decrypted_passphrase() {
+        Ok(p) => p,
+        Err(e) => {
+            log::error!("[{}] Failed to decrypt passphrase: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("解密passphrase失败")).with_request_id(request_id));
+        }
+    };
 
-    Ok(ExchangeConfigDetailResponse {
+    Ok(ApiResponse::success(ExchangeConfigDetailResponse {
         id: config.id,
         exchange_name: config.exchange_name,
         display_name: config.display_name,
@@ -235,7 +281,7 @@ pub async fn exchange_get_detail(
         status: config.status,
         created_at: config.created_at,
         updated_at: config.updated_at,
-    })
+    }).with_request_id(request_id))
 }
 
 /// Delete an exchange configuration
@@ -243,15 +289,21 @@ pub async fn exchange_get_detail(
 pub async fn exchange_delete(
     db: State<'_, crate::infrastructure::Database>,
     config_id: String,
-) -> Result<(), String> {
-    log::info!("exchange_delete called: config_id={}", config_id);
+) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    log::info!("[{}] exchange_delete called: config_id={}", request_id, config_id);
 
     let repo = ExchangeRepository::new(db.pool.clone());
-    repo.delete(&config_id)
-        .await
-        .map_err(|e| format!("Failed to delete exchange config: {}", e))?;
-
-    Ok(())
+    match repo.delete(&config_id).await {
+        Ok(()) => {
+            log::info!("[{}] Exchange config deleted successfully", request_id);
+            Ok(ApiResponse::success_empty().with_request_id(request_id))
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to delete exchange config: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed("删除交易所配置失败")).with_request_id(request_id))
+        }
+    }
 }
 
 /// Update exchange configuration status
@@ -260,24 +312,29 @@ pub async fn exchange_update_status(
     db: State<'_, crate::infrastructure::Database>,
     config_id: String,
     status: String,
-) -> Result<(), String> {
+) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     log::info!(
-        "exchange_update_status called: config_id={}, status={}",
-        config_id,
-        status
+        "[{}] exchange_update_status called: config_id={}, status={}",
+        request_id, config_id, status
     );
 
     // Validate status
     if !matches!(status.as_str(), "active" | "inactive" | "disabled") {
-        return Err("Invalid status. Must be 'active', 'inactive', or 'disabled'".to_string());
+        return Ok(ApiResponse::error(ApiError::invalid_parameter("status")).with_request_id(request_id));
     }
 
     let repo = ExchangeRepository::new(db.pool.clone());
-    repo.update_status(&config_id, &status)
-        .await
-        .map_err(|e| format!("Failed to update exchange status: {}", e))?;
-
-    Ok(())
+    match repo.update_status(&config_id, &status).await {
+        Ok(()) => {
+            log::info!("[{}] Exchange status updated successfully", request_id);
+            Ok(ApiResponse::success_empty().with_request_id(request_id))
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to update exchange status: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed("更新状态失败")).with_request_id(request_id))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -285,11 +342,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_exchange_name_from_str() {
-        assert!(ExchangeName::from_str("binance").is_some());
-        assert!(ExchangeName::from_str("okx").is_some());
-        assert!(ExchangeName::from_str("bybit").is_some());
-        assert!(ExchangeName::from_str("invalid").is_none());
+    fn test_exchange_name_parse() {
+        assert!(ExchangeName::parse("binance").is_some());
+        assert!(ExchangeName::parse("okx").is_some());
+        assert!(ExchangeName::parse("bybit").is_some());
+        assert!(ExchangeName::parse("invalid").is_none());
     }
 
     #[test]

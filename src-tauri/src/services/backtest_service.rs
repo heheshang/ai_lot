@@ -118,7 +118,7 @@ impl BacktestService {
             ORDER BY timestamp ASC
         "#;
 
-        let rows = sqlx::query_as::<_, (String, String, i64, f64, f64, f64, f64, f64)>(&query)
+        let rows = sqlx::query_as::<_, (String, String, i64, f64, f64, f64, f64, f64)>(query)
             .bind(symbol)
             .bind(timeframe)
             .bind(start_time)

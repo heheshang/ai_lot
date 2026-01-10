@@ -1,3 +1,4 @@
+use crate::core::response::{ApiResponse, ApiError};
 use crate::infrastructure::config::AppConfig;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -43,9 +44,23 @@ pub struct NotificationConfigUpdater {
 
 /// 获取配置
 #[tauri::command]
-pub async fn config_get(handle: AppHandle) -> Result<AppConfig, String> {
-    let config_manager = get_config_manager(&handle)?;
-    config_manager.load().map_err(|e| e.to_string())
+pub async fn config_get(handle: AppHandle) -> Result<ApiResponse<AppConfig>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let config_manager = match get_config_manager(&handle) {
+        Ok(m) => m,
+        Err(e) => {
+            log::error!("[{}] Failed to get config manager: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("获取配置管理器失败")).with_request_id(request_id));
+        }
+    };
+
+    match config_manager.load() {
+        Ok(config) => Ok(ApiResponse::success(config).with_request_id(request_id)),
+        Err(e) => {
+            log::error!("[{}] Failed to load config: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed(format!("加载配置失败: {}", e))).with_request_id(request_id))
+        }
+    }
 }
 
 /// 更新配置
@@ -53,25 +68,44 @@ pub async fn config_get(handle: AppHandle) -> Result<AppConfig, String> {
 pub async fn config_update(
     handle: AppHandle,
     updater: serde_json::Value,
-) -> Result<AppConfig, String> {
-    let config_manager = get_config_manager(&handle)?;
+) -> Result<ApiResponse<AppConfig>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let config_manager = match get_config_manager(&handle) {
+        Ok(m) => m,
+        Err(e) => {
+            log::error!("[{}] Failed to get config manager: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("获取配置管理器失败")).with_request_id(request_id));
+        }
+    };
 
-    let config = config_manager
-        .update(|cfg| apply_config_update(cfg, updater))
-        .map_err(|e| e.to_string())?;
-
-    Ok(config)
+    match config_manager.update(|cfg| apply_config_update(cfg, updater)) {
+        Ok(config) => Ok(ApiResponse::success(config).with_request_id(request_id)),
+        Err(e) => {
+            log::error!("[{}] Failed to update config: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed(format!("更新配置失败: {}", e))).with_request_id(request_id))
+        }
+    }
 }
 
 /// 重置配置为默认值
 #[tauri::command]
-pub async fn config_reset(handle: AppHandle) -> Result<AppConfig, String> {
-    let config_manager = get_config_manager(&handle)?;
+pub async fn config_reset(handle: AppHandle) -> Result<ApiResponse<AppConfig>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let config_manager = match get_config_manager(&handle) {
+        Ok(m) => m,
+        Err(e) => {
+            log::error!("[{}] Failed to get config manager: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("获取配置管理器失败")).with_request_id(request_id));
+        }
+    };
+
     let default_config = AppConfig::default();
-    config_manager
-        .save(&default_config)
-        .map_err(|e| e.to_string())?;
-    Ok(default_config)
+    if let Err(e) = config_manager.save(&default_config) {
+        log::error!("[{}] Failed to save default config: {}", request_id, e);
+        return Ok(ApiResponse::error(ApiError::operation_failed("保存默认配置失败")).with_request_id(request_id));
+    }
+
+    Ok(ApiResponse::success(default_config).with_request_id(request_id))
 }
 
 /// 获取配置管理器

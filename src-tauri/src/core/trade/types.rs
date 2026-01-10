@@ -277,7 +277,7 @@ impl Interval {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "1m" => Some(Self::OneMinute),
             "5m" => Some(Self::FiveMinutes),

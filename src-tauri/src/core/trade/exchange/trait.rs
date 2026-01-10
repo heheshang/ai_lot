@@ -21,7 +21,7 @@ impl ExchangeName {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "binance" => Some(Self::Binance),
             "okx" => Some(Self::OKX),
@@ -39,7 +39,7 @@ impl fmt::Display for ExchangeName {
 
 impl From<String> for ExchangeName {
     fn from(s: String) -> Self {
-        Self::from_str(s.as_str()).unwrap_or(Self::Binance)
+        Self::parse(s.as_str()).unwrap_or(Self::Binance)
     }
 }
 

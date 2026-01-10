@@ -24,17 +24,17 @@ impl ScriptExecutor {
 
     /// 获取存储数据的快照（用于测试）
     pub fn get_storage_snapshot(&self) -> HashMap<String, String> {
-        self.storage.lock().unwrap().clone()
+        self.storage.lock().expect("Storage mutex poisoned").clone()
     }
 
     /// 清空存储（用于测试）
     pub fn clear_storage(&self) {
-        self.storage.lock().unwrap().clear();
+        self.storage.lock().expect("Storage mutex poisoned").clear();
     }
 
     /// 准备存储数据的JavaScript代码
     fn prepare_storage_js(&self) -> String {
-        let storage = self.storage.lock().unwrap();
+        let storage = self.storage.lock().expect("Storage mutex poisoned");
         let entries: Vec<String> = storage
             .iter()
             .map(|(k, v)| format!("'{}': '{}'", k.replace('\\', "\\\\").replace('\'', "\\'"), v.replace('\\', "\\\\").replace('\'', "\\'")))
@@ -542,7 +542,7 @@ function onStop(context) {}
         let params = json!({});
 
         // 验证存储读操作 - 先手动设置一些数据
-        executor.storage.lock().unwrap().insert("test_key".to_string(), "test_value".to_string());
+        executor.storage.lock().expect("Storage mutex poisoned").insert("test_key".to_string(), "test_value".to_string());
 
         let kline = Kline {
             symbol: "BTCUSDT".to_string(),
@@ -635,7 +635,7 @@ function onStop(context) {}
         assert_eq!(executor.get_storage_snapshot().len(), 0);
 
         // 手动设置存储数据
-        executor.storage.lock().unwrap().insert("test_key".to_string(), "test_value".to_string());
+        executor.storage.lock().expect("Storage mutex poisoned").insert("test_key".to_string(), "test_value".to_string());
         assert_eq!(executor.get_storage_snapshot().get("test_key"), Some(&"test_value".to_string()));
     }
 }

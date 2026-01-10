@@ -10,6 +10,12 @@ use serde_json::Value;
 /// Bybit data converter
 pub struct BybitConverter;
 
+impl Default for BybitConverter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BybitConverter {
     pub fn new() -> Self {
         Self
@@ -78,7 +84,7 @@ impl MarketDataConverter for BybitConverter {
                         )?.as_str()
                     ),
                     timeframe: interval.as_str().to_string(),
-                    timestamp: candle_arr.get(0).and_then(|v| v.as_i64())
+                    timestamp: candle_arr.first().and_then(|v| v.as_i64())
                         .map(|ts| if ts < 946_684_800_000 { ts * 1000 } else { ts })
                         .unwrap_or(0),
                     open: candle_arr.get(1).and_then(|v| v.as_str().and_then(|s| s.parse().ok()))
@@ -180,12 +186,12 @@ impl MarketDataConverter for BybitConverter {
             )?,
             filled_quantity: helpers::parse_f64(
                 result.get("cumExecQty").unwrap_or(&Value::Null), "cumExecQty"
-            ).or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+            ).or(Ok::<f64, ConversionError>(0.0))?,
             avg_price: result.get("avgPrice").and_then(|v| v.as_str().and_then(|s| s.parse().ok())),
             status,
             commission: helpers::parse_f64(
                 result.get("execFee").unwrap_or(&Value::Null), "execFee"
-            ).or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+            ).or(Ok::<f64, ConversionError>(0.0))?,
             created_at: helpers::normalize_timestamp(
                 result.get("createdTime").unwrap_or(&Value::Null), "createdTime"
             )?,

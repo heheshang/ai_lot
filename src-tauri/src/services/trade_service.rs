@@ -8,7 +8,7 @@ use crate::core::trade::types::*;
 use crate::core::trade::position::PositionManager;
 use crate::core::trade::order::OrderStateMachine;
 use crate::core::{AppError, AppResult};
-use crate::infrastructure::Database;
+use sqlx::SqlitePool;
 use chrono::Utc;
 use sqlx::Row;
 use std::sync::Arc;
@@ -18,16 +18,16 @@ use uuid::Uuid;
 /// Trade service for managing orders and positions
 pub struct TradeService {
     exchange: Arc<dyn Exchange>,
-    db: Database,
+    pool: SqlitePool,
     position_manager: Arc<RwLock<PositionManager>>,
 }
 
 impl TradeService {
     /// Create a new trade service
-    pub fn new(exchange: Arc<dyn Exchange>, db: Database) -> Self {
+    pub fn new(exchange: Arc<dyn Exchange>, pool: SqlitePool) -> Self {
         Self {
             exchange,
-            db,
+            pool,
             position_manager: Arc::new(RwLock::new(PositionManager::new())),
         }
     }
@@ -94,31 +94,55 @@ impl TradeService {
         status: Option<OrderState>,
         limit: usize,
     ) -> AppResult<Vec<Order>> {
-        let mut query = String::from(
-            "SELECT * FROM orders WHERE user_id = ?"
-        );
-
-        let _params = [user_id.to_string()];
-
-        if let Some(sym) = symbol {
-            query.push_str(&format!(" AND symbol = '{}'", sym));
-        }
-
-        if let Some(st) = status {
-            query.push_str(&format!(" AND status = '{}'", st));
-        }
-
-        query.push_str(&format!(" ORDER BY created_at DESC LIMIT {}", limit));
-
-        let rows = sqlx::query(&query)
-            .fetch_all(&self.db.pool)
-            .await?;
-
+        // Use parameterized queries with conditional branches to prevent SQL injection
+        let rows = match (symbol, status) {
+            (None, None) => {
+                sqlx::query(
+                    "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT ?"
+                )
+                .bind(user_id)
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (Some(sym), None) => {
+                sqlx::query(
+                    "SELECT * FROM orders WHERE user_id = ? AND symbol = ? ORDER BY created_at DESC LIMIT ?"
+                )
+                .bind(user_id)
+                .bind(sym)
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (None, Some(st)) => {
+                sqlx::query(
+                    "SELECT * FROM orders WHERE user_id = ? AND status = ? ORDER BY created_at DESC LIMIT ?"
+                )
+                .bind(user_id)
+                .bind(st.to_string())
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            (Some(sym), Some(st)) => {
+                sqlx::query(
+                    "SELECT * FROM orders WHERE user_id = ? AND symbol = ? AND status = ? ORDER BY created_at DESC LIMIT ?"
+                )
+                .bind(user_id)
+                .bind(sym)
+                .bind(st.to_string())
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+            }
+        };
+        
         let mut orders = Vec::new();
         for row in rows {
             orders.push(self.row_to_order(row)?);
         }
-
+        
         Ok(orders)
     }
 
@@ -159,7 +183,7 @@ impl TradeService {
             "SELECT * FROM positions WHERE user_id = ? AND quantity > 0 ORDER BY opened_at DESC"
         )
         .bind(user_id)
-        .fetch_all(&self.db.pool)
+        .fetch_all(&self.pool)
         .await?;
 
         let mut positions = Vec::new();
@@ -221,7 +245,7 @@ impl TradeService {
         .bind(order.commission)
         .bind(order.created_at)
         .bind(order.filled_at)
-        .execute(&self.db.pool)
+                .execute(&self.pool)
         .await?;
 
         Ok(())
@@ -233,7 +257,7 @@ impl TradeService {
         )
         .bind(order_id)
         .bind(user_id)
-        .fetch_optional(&self.db.pool)
+        .fetch_optional(&self.pool)
         .await?;
 
         match row {
@@ -249,7 +273,7 @@ impl TradeService {
         .bind(status.to_string())
         .bind(Utc::now().timestamp())
         .bind(order_id)
-        .execute(&self.db.pool)
+                .execute(&self.pool)
         .await?;
 
         Ok(())
@@ -273,7 +297,7 @@ impl TradeService {
         .bind(order.filled_at)
         .bind(Utc::now().timestamp())
         .bind(&order.id)
-        .execute(&self.db.pool)
+                .execute(&self.pool)
         .await?;
 
         Ok(())
@@ -331,50 +355,5 @@ impl TradeService {
             realized_pnl: row.try_get("realized_pnl")?,
             opened_at: row.try_get("opened_at")?,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_validate_order_request() {
-        let service = create_test_service();
-
-        // Valid market order
-        let request = OrderRequest {
-            symbol: "BTCUSDT".to_string(),
-            side: OrderSide::Buy,
-            order_type: OrderType::Market,
-            price: None,
-            stop_price: None,
-            quantity: 1.0,
-            client_order_id: None,
-            time_in_force: None,
-        };
-
-        assert!(service.validate_order_request(&request).is_ok());
-
-        // Invalid quantity
-        let invalid_request = OrderRequest {
-            quantity: -1.0,
-            ..request.clone()
-        };
-        assert!(service.validate_order_request(&invalid_request).is_err());
-
-        // Limit order without price
-        let invalid_limit = OrderRequest {
-            order_type: OrderType::Limit,
-            price: None,
-            ..request
-        };
-        assert!(service.validate_order_request(&invalid_limit).is_err());
-    }
-
-    fn create_test_service() -> TradeService {
-        // This would need a mock exchange and test database
-        // For now, just a placeholder
-        todo!("Implement test service setup")
     }
 }

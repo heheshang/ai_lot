@@ -101,7 +101,7 @@ impl ConverterFactory {
 
     /// Create converter from string name
     pub fn from_name(name: &str) -> Result<Box<dyn MarketDataConverter>, String> {
-        let exchange = ExchangeName::from_str(name)
+        let exchange = ExchangeName::parse(name)
             .ok_or_else(|| format!("Unknown exchange: {}", name))?;
 
         Ok(Self::create(exchange))

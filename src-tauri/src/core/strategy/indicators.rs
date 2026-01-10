@@ -54,7 +54,6 @@ impl IndicatorCalculator {
     }
 
     /// ==================== Trend Indicators ====================
-
     /// Simple Moving Average (SMA)
     ///
     /// # Arguments
@@ -119,8 +118,8 @@ impl IndicatorCalculator {
         result.push(Some(ema));
 
         // Calculate EMA for remaining values
-        for i in period..closes.len() {
-            ema = (closes[i] - ema) * multiplier + ema;
+        for close in closes.iter().skip(period) {
+            ema = (*close - ema) * multiplier + ema;
             result.push(Some(ema));
         }
 
@@ -192,7 +191,6 @@ impl IndicatorCalculator {
     }
 
     /// ==================== Momentum Indicators ====================
-
     /// Relative Strength Index (RSI)
     ///
     /// # Arguments
@@ -305,8 +303,8 @@ impl IndicatorCalculator {
                 signal_line_values.push(ema);
             }
 
-            for i in signal..macd_values.len() {
-                ema = (macd_values[i] - ema) * multiplier + ema;
+            for value in macd_values.iter().skip(signal) {
+                ema = (*value - ema) * multiplier + ema;
                 signal_line_values.push(ema);
             }
         }
@@ -340,7 +338,6 @@ impl IndicatorCalculator {
     }
 
     /// ==================== Volatility Indicators ====================
-
     /// Bollinger Bands
     ///
     /// # Arguments
@@ -427,8 +424,8 @@ impl IndicatorCalculator {
         result.push(Some(atr));
 
         // Calculate subsequent ATR values using Wilder's smoothing
-        for i in period..true_ranges.len() {
-            atr = (atr * (period - 1) as f64 + true_ranges[i]) / period as f64;
+        for value in true_ranges.iter().skip(period) {
+            atr = (atr * (period - 1) as f64 + *value) / period as f64;
             result.push(Some(atr));
         }
 
@@ -460,7 +457,6 @@ impl IndicatorCalculator {
     }
 
     /// ==================== Volume Indicators ====================
-
     /// On-Balance Volume (OBV)
     ///
     /// Measures buying and selling pressure
@@ -475,13 +471,10 @@ impl IndicatorCalculator {
         for i in 0..self.klines.len() {
             if i == 0 {
                 obv = self.klines[i].volume;
-            } else {
-                if self.klines[i].close > self.klines[i - 1].close {
-                    obv += self.klines[i].volume;
-                } else if self.klines[i].close < self.klines[i - 1].close {
-                    obv -= self.klines[i].volume;
-                }
-                // If close is equal, OBV doesn't change
+            } else if self.klines[i].close > self.klines[i - 1].close {
+                obv += self.klines[i].volume;
+            } else if self.klines[i].close < self.klines[i - 1].close {
+                obv -= self.klines[i].volume;
             }
             result.push(Some(obv));
         }
@@ -510,7 +503,6 @@ impl IndicatorCalculator {
     }
 
     /// ==================== Helper Methods ====================
-
     /// Get the latest value from an indicator vector
     pub fn latest(&self, values: &[Option<f64>]) -> Option<f64> {
         values.iter().rev().find_map(|v| *v)

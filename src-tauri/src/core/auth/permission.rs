@@ -1,6 +1,5 @@
 /// 权限定义
 /// 定义系统中的所有权限常量
-
 // ========== 用户管理 ==========
 pub const PERM_USER_READ: &str = "user:read";
 pub const PERM_USER_WRITE: &str = "user:write";

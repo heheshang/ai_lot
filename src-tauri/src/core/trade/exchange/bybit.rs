@@ -380,7 +380,7 @@ impl BybitExchange {
         Ok(Kline {
             symbol: String::new(),
             timeframe: interval.as_str().to_string(),
-            timestamp: arr.get(0).and_then(|v| v.as_i64()).unwrap_or(0),
+            timestamp: arr.first().and_then(|v| v.as_i64()).unwrap_or(0),
             open: arr.get(1).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
             high: arr.get(2).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
             low: arr.get(3).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
@@ -565,7 +565,7 @@ impl Exchange for BybitExchange {
         let bybit_symbol = self.normalize_symbol(symbol);
         let path = format!("/v5/market/tickers?category=spot&symbol={}", bybit_symbol);
 
-        let response = self.client.get(&format!("{}{}", REST_API_BASE, path))
+        let response = self.client.get(format!("{}{}", REST_API_BASE, path))
             .send()
             .await?
             .json::<Value>()
@@ -592,7 +592,7 @@ impl Exchange for BybitExchange {
             bybit_symbol, bybit_interval, limit
         );
 
-        let response = self.client.get(&format!("{}{}", REST_API_BASE, path))
+        let response = self.client.get(format!("{}{}", REST_API_BASE, path))
             .send()
             .await?
             .json::<Value>()
@@ -820,8 +820,7 @@ impl Exchange for BybitExchange {
         let balances: Vec<Balance> = data.iter()
             .filter_map(|account| {
                 let coin_list = account["coin"].as_array();
-                if let Some(coins) = coin_list {
-                    Some(coins.iter().filter_map(|item| {
+                coin_list.map(|coins| coins.iter().filter_map(|item| {
                         let wallet_balance = item["walletBalance"].as_str().unwrap_or("0").parse::<f64>().unwrap_or(0.0);
                         if wallet_balance > 0.0 {
                             Some(Balance {
@@ -834,9 +833,6 @@ impl Exchange for BybitExchange {
                             None
                         }
                     }).collect::<Vec<Balance>>())
-                } else {
-                    None
-                }
             })
             .flatten()
             .collect();

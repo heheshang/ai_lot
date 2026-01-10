@@ -15,7 +15,13 @@
         </el-breadcrumb>
       </div>
       <div class="header-actions">
-        <el-button type="primary" :icon="VideoPlay" @click="runBacktest" :loading="isRunning" class="run-btn">
+        <el-button
+          type="primary"
+          :icon="VideoPlay"
+          @click="runBacktest"
+          :loading="isRunning"
+          class="run-btn"
+        >
           {{ isRunning ? '回测中...' : '开始回测' }}
         </el-button>
       </div>
@@ -51,7 +57,12 @@
           <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="选择策略">
-                <el-select v-model="backtestConfig.strategyId" placeholder="选择策略" style="width: 100%" :loading="loadingStrategies">
+                <el-select
+                  v-model="backtestConfig.strategyId"
+                  placeholder="选择策略"
+                  style="width: 100%"
+                  :loading="loadingStrategies"
+                >
                   <el-option
                     v-for="strategy in strategies"
                     :key="strategy.id"
@@ -60,8 +71,15 @@
                   >
                     <div class="strategy-option">
                       <span class="strategy-name">{{ strategy.name }}</span>
-                      <el-tag v-if="strategy.category" size="small" type="info">{{ strategy.category }}</el-tag>
-                      <el-tag v-if="strategy.status" size="small" :type="strategy.status === 'active' ? 'success' : 'info'">{{ strategy.status }}</el-tag>
+                      <el-tag v-if="strategy.category" size="small" type="info">{{
+                        strategy.category
+                      }}</el-tag>
+                      <el-tag
+                        v-if="strategy.status"
+                        size="small"
+                        :type="strategy.status === 'active' ? 'success' : 'info'"
+                        >{{ strategy.status }}</el-tag
+                      >
                     </div>
                   </el-option>
                 </el-select>
@@ -69,7 +87,11 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="交易对">
-                <el-select v-model="backtestConfig.symbol" placeholder="选择交易对" style="width: 100%">
+                <el-select
+                  v-model="backtestConfig.symbol"
+                  placeholder="选择交易对"
+                  style="width: 100%"
+                >
                   <el-option label="BTC/USDT" value="BTCUSDT" />
                   <el-option label="ETH/USDT" value="ETHUSDT" />
                   <el-option label="BNB/USDT" value="BNBUSDT" />
@@ -95,7 +117,11 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="K线周期">
-                <el-select v-model="backtestConfig.interval" placeholder="选择周期" style="width: 100%">
+                <el-select
+                  v-model="backtestConfig.interval"
+                  placeholder="选择周期"
+                  style="width: 100%"
+                >
                   <el-option label="1分钟" value="1m" />
                   <el-option label="5分钟" value="5m" />
                   <el-option label="15分钟" value="15m" />
@@ -263,7 +289,7 @@
       <div v-if="backtestResult && !isRunning" class="result-section">
         <!-- 统计卡片 -->
         <TransitionGroup name="stat-card" tag="div" class="stats-cards">
-          <div v-for="(stat, index) in statCards" :key="stat.key" class="stat-card" :class="stat.type">
+          <div v-for="stat in statCards" :key="stat.key" class="stat-card" :class="stat.type">
             <div class="stat-bg"></div>
             <div class="stat-icon">
               <el-icon :size="26">
@@ -290,7 +316,7 @@
         <!-- 详细指标 -->
         <div class="metrics-grid">
           <TransitionGroup name="metric-card" tag="div" class="metrics-row">
-            <div v-for="(metric, index) in metricCards" :key="metric.key" class="metric-card">
+            <div v-for="metric in metricCards" :key="metric.key" class="metric-card">
               <div class="metric-header">
                 <span class="metric-title">{{ metric.title }}</span>
                 <div class="metric-icon" :class="metric.color">
@@ -354,7 +380,11 @@
             </el-table-column>
             <el-table-column prop="side" label="方向" width="80">
               <template #default="{ row }">
-                <el-tag :type="row.side === 'buy' ? 'danger' : 'success'" size="small" effect="plain">
+                <el-tag
+                  :type="row.side === 'buy' ? 'danger' : 'success'"
+                  size="small"
+                  effect="plain"
+                >
                   {{ row.side === 'buy' ? '买入' : '卖出' }}
                 </el-tag>
               </template>
@@ -402,32 +432,38 @@
         <div class="empty-illustration">
           <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
             <!-- Chart illustration -->
-            <path d="M20 120 Q50 60 80 80 T140 80 T180 100" stroke="url(#chartGrad)" stroke-width="3" fill="none" stroke-linecap="round"/>
-            <circle cx="50" cy="70" r="6" fill="url(#dotGrad1)"/>
-            <circle cx="80" cy="60" r="6" fill="url(#dotGrad2)"/>
-            <circle cx="110" cy="75" r="6" fill="url(#dotGrad1)"/>
-            <circle cx="140" cy="55" r="6" fill="url(#dotGrad2)"/>
+            <path
+              d="M20 120 Q50 60 80 80 T140 80 T180 100"
+              stroke="url(#chartGrad)"
+              stroke-width="3"
+              fill="none"
+              stroke-linecap="round"
+            />
+            <circle cx="50" cy="70" r="6" fill="url(#dotGrad1)" />
+            <circle cx="80" cy="60" r="6" fill="url(#dotGrad2)" />
+            <circle cx="110" cy="75" r="6" fill="url(#dotGrad1)" />
+            <circle cx="140" cy="55" r="6" fill="url(#dotGrad2)" />
             <!-- Background elements -->
-            <rect x="15" y="115" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.6"/>
-            <rect x="55" y="55" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.8"/>
-            <rect x="95" y="70" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.7"/>
-            <rect x="135" y="50" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.9"/>
+            <rect x="15" y="115" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.6" />
+            <rect x="55" y="55" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.8" />
+            <rect x="95" y="70" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.7" />
+            <rect x="135" y="50" width="30" height="20" rx="4" fill="url(#barGrad)" opacity="0.9" />
             <defs>
               <linearGradient id="chartGrad" x1="0%" y1="0%" x2="200%" y2="0%">
-                <stop offset="0%" style="stop-color:#667eea"/>
-                <stop offset="100%" style="stop-color:#764ba2"/>
+                <stop offset="0%" style="stop-color: #667eea" />
+                <stop offset="100%" style="stop-color: #764ba2" />
               </linearGradient>
               <radialGradient id="dotGrad1">
-                <stop offset="0%" style="stop-color:#667eea;stop-opacity:1"/>
-                <stop offset="100%" style="stop-color:#667eea;stop-opacity:0.3"/>
+                <stop offset="0%" style="stop-color: #667eea; stop-opacity: 1" />
+                <stop offset="100%" style="stop-color: #667eea; stop-opacity: 0.3" />
               </radialGradient>
               <radialGradient id="dotGrad2">
-                <stop offset="0%" style="stop-color:#764ba2;stop-opacity:1"/>
-                <stop offset="100%" style="stop-color:#764ba2;stop-opacity:0.3"/>
+                <stop offset="0%" style="stop-color: #764ba2; stop-opacity: 1" />
+                <stop offset="100%" style="stop-color: #764ba2; stop-opacity: 0.3" />
               </radialGradient>
               <linearGradient id="barGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" style="stop-color:#667eea;stop-opacity:0.3"/>
-                <stop offset="100%" style="stop-color:#764ba2;stop-opacity:0.1"/>
+                <stop offset="0%" style="stop-color: #667eea; stop-opacity: 0.3" />
+                <stop offset="100%" style="stop-color: #764ba2; stop-opacity: 0.1" />
               </linearGradient>
             </defs>
           </svg>
@@ -440,10 +476,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
-import { ElMessage } from 'element-plus';
-import * as echarts from 'echarts';
-import type { EChartsOption } from 'echarts';
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import * as echarts from 'echarts'
+import type { EChartsOption } from 'echarts'
 import {
   DataAnalysis,
   Setting,
@@ -460,21 +496,21 @@ import {
   List,
   Download,
   Timer,
-} from '@element-plus/icons-vue';
-import { backtestApi, strategyApi } from '@/api/tauri';
-import type { Strategy } from '@/types';
+} from '@element-plus/icons-vue'
+import { backtestApi, strategyApi } from '@/api/tauri'
+import type { Strategy } from '@/types'
 
-const equityChartRef = ref<HTMLElement>();
-let equityChart: echarts.ECharts | null = null;
+const equityChartRef = ref<HTMLElement>()
+let equityChart: echarts.ECharts | null = null
 
 // 状态
-const isRunning = ref(false);
-const progressPercent = ref(0);
-const processedBars = ref(0);
-const estimatedTime = ref('');
-const chartType = ref<'equity' | 'drawdown'>('equity');
-const currentStep = ref(0);
-const currentCapital = ref(100000);
+const isRunning = ref(false)
+const progressPercent = ref(0)
+const processedBars = ref(0)
+const estimatedTime = ref('')
+const chartType = ref<'equity' | 'drawdown'>('equity')
+const currentStep = ref(0)
+const currentCapital = ref(100000)
 
 // 回测配置
 const backtestConfig = ref({
@@ -488,16 +524,16 @@ const backtestConfig = ref({
   maxPositions: 3,
   maxPositionRatio: 30,
   stopLossRatio: 5,
-});
+})
 
 // 策略列表
-const strategies = ref<Strategy[]>([]);
-const loadingStrategies = ref(false);
+const strategies = ref<Strategy[]>([])
+const loadingStrategies = ref(false)
 
 // 统计卡片配置
 const statCards = computed(() => {
-  if (!backtestResult.value) return [];
-  const r = backtestResult.value;
+  if (!backtestResult.value) return []
+  const r = backtestResult.value
   return [
     {
       key: 'return',
@@ -536,13 +572,13 @@ const statCards = computed(() => {
       type: 'info',
       change: r.sharpeRatio >= 1 ? '优秀' : '一般',
     },
-  ];
-});
+  ]
+})
 
 // 指标卡片配置
 const metricCards = computed(() => {
-  if (!backtestResult.value) return [];
-  const r = backtestResult.value;
+  if (!backtestResult.value) return []
+  const r = backtestResult.value
   return [
     {
       key: 'trades',
@@ -565,7 +601,11 @@ const metricCards = computed(() => {
         { label: '平均盈利', value: formatCurrency(r.avgWin), valueClass: 'text-success' },
         { label: '平均亏损', value: formatCurrency(r.avgLoss), valueClass: 'danger' },
         { label: '盈亏比', value: r.profitFactor.toFixed(2), valueClass: '' },
-        { label: '期望收益', value: formatCurrency(r.expectedValue), valueClass: getReturnClass(r.expectedValue) },
+        {
+          label: '期望收益',
+          value: formatCurrency(r.expectedValue),
+          valueClass: getReturnClass(r.expectedValue),
+        },
       ],
     },
     {
@@ -576,7 +616,11 @@ const metricCards = computed(() => {
       items: [
         { label: '最大连续盈利', value: `${r.maxConsecutiveWins}次`, valueClass: 'text-success' },
         { label: '最大连续亏损', value: `${r.maxConsecutiveLosses}次`, valueClass: 'danger' },
-        { label: '最大单笔盈利', value: formatCurrency(r.maxSingleWin), valueClass: 'text-success' },
+        {
+          label: '最大单笔盈利',
+          value: formatCurrency(r.maxSingleWin),
+          valueClass: 'text-success',
+        },
         { label: '最大单笔亏损', value: formatCurrency(r.maxSingleLoss), valueClass: 'danger' },
       ],
     },
@@ -592,95 +636,95 @@ const metricCards = computed(() => {
         { label: '平均资金利用率', value: formatPercent(r.avgCapitalUtilization), valueClass: '' },
       ],
     },
-  ];
-});
+  ]
+})
 
 // 加载策略列表
 async function loadStrategies() {
-  loadingStrategies.value = true;
+  loadingStrategies.value = true
   try {
-    const userId = 'default';
-    const result = await strategyApi.list(userId);
-    strategies.value = result;
+    const userId = 'default'
+    const result = await strategyApi.list(userId)
+    strategies.value = result
   } catch (error) {
-    ElMessage.error(`加载策略列表失败: ${error}`);
+    ElMessage.error(`加载策略列表失败: ${error}`)
   } finally {
-    loadingStrategies.value = false;
+    loadingStrategies.value = false
   }
 }
 
 // 回测结果接口
 interface Trade {
-  id: number;
-  time: Date;
-  side: 'buy' | 'sell';
-  price: number;
-  amount: number;
-  value: number;
-  fee: number;
-  pnl: number | null;
-  balance: number;
+  id: number
+  time: Date
+  side: 'buy' | 'sell'
+  price: number
+  amount: number
+  value: number
+  fee: number
+  pnl: number | null
+  balance: number
 }
 
 interface BacktestResult {
-  initialCapital: number;
-  finalCapital: number;
-  profit: number;
-  totalReturn: number;
-  maxDrawdown: number;
-  sharpeRatio: number;
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  winRate: number;
-  avgWin: number;
-  avgLoss: number;
-  profitFactor: number;
-  expectedValue: number;
-  maxConsecutiveWins: number;
-  maxConsecutiveLosses: number;
-  maxSingleWin: number;
-  maxSingleLoss: number;
-  peakCapital: number;
-  troughCapital: number;
-  avgCapitalUtilization: number;
-  equityCurve: number[];
-  drawdownCurve: number[];
-  trades: Trade[];
+  initialCapital: number
+  finalCapital: number
+  profit: number
+  totalReturn: number
+  maxDrawdown: number
+  sharpeRatio: number
+  totalTrades: number
+  winningTrades: number
+  losingTrades: number
+  winRate: number
+  avgWin: number
+  avgLoss: number
+  profitFactor: number
+  expectedValue: number
+  maxConsecutiveWins: number
+  maxConsecutiveLosses: number
+  maxSingleWin: number
+  maxSingleLoss: number
+  peakCapital: number
+  troughCapital: number
+  avgCapitalUtilization: number
+  equityCurve: number[]
+  drawdownCurve: number[]
+  trades: Trade[]
 }
 
-const backtestResult = ref<BacktestResult | null>(null);
+const backtestResult = ref<BacktestResult | null>(null)
 
 // 日期快捷选项
 const dateShortcuts = [
   {
     text: '最近一周',
     value: () => {
-      const end = new Date();
-      const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
-      return [start, end];
+      const end = new Date()
+      const start = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7)
+      return [start, end]
     },
   },
   {
     text: '最近一个月',
     value: () => {
-      const end = new Date();
-      const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
-      return [start, end];
+      const end = new Date()
+      const start = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+      return [start, end]
     },
   },
   {
     text: '最近三个月',
     value: () => {
-      const end = new Date();
-      const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
-      return [start, end];
+      const end = new Date()
+      const start = new Date()
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * 90)
+      return [start, end]
     },
   },
-];
+]
 
 // 方法
 function resetConfig() {
@@ -695,36 +739,36 @@ function resetConfig() {
     maxPositions: 3,
     maxPositionRatio: 30,
     stopLossRatio: 5,
-  };
-  backtestResult.value = null;
-  currentStep.value = 0;
-  ElMessage.success('已重置配置');
+  }
+  backtestResult.value = null
+  currentStep.value = 0
+  ElMessage.success('已重置配置')
 }
 
 async function runBacktest() {
   if (!backtestConfig.value.strategyId) {
-    ElMessage.warning('请选择策略');
-    return;
+    ElMessage.warning('请选择策略')
+    return
   }
   if (!backtestConfig.value.dateRange?.length) {
-    ElMessage.warning('请选择时间范围');
-    return;
+    ElMessage.warning('请选择时间范围')
+    return
   }
 
-  isRunning.value = true;
-  currentStep.value = 2;
-  progressPercent.value = 0;
-  processedBars.value = 0;
-  currentCapital.value = backtestConfig.value.initialCapital;
+  isRunning.value = true
+  currentStep.value = 2
+  progressPercent.value = 0
+  processedBars.value = 0
+  currentCapital.value = backtestConfig.value.initialCapital
 
   // 模拟进度
-  simulateProgress();
+  simulateProgress()
 
   try {
     const config = {
       strategy_id: backtestConfig.value.strategyId,
       symbol: backtestConfig.value.symbol,
-      timeframe: backtestConfig.interval,
+      timeframe: backtestConfig.value.interval,
       start_time: Math.floor(backtestConfig.value.dateRange[0].getTime() / 1000),
       end_time: Math.floor(backtestConfig.value.dateRange[1].getTime() / 1000),
       initial_capital: backtestConfig.value.initialCapital,
@@ -733,9 +777,9 @@ async function runBacktest() {
       max_positions: backtestConfig.value.maxPositions,
       max_position_ratio: backtestConfig.value.maxPositionRatio / 100,
       stop_loss_ratio: backtestConfig.value.stopLossRatio / 100,
-    };
+    }
 
-    const result = await backtestApi.run(config);
+    const result = await backtestApi.run(config)
 
     if (result) {
       backtestResult.value = {
@@ -773,54 +817,55 @@ async function runBacktest() {
           pnl: t.pnl || null,
           balance: t.balance || 0,
         })),
-      };
-      currentCapital.value = backtestResult.value.finalCapital;
+      }
+      currentCapital.value = backtestResult.value.finalCapital
     }
 
-    currentStep.value = 3;
-    ElMessage.success('回测完成');
+    currentStep.value = 3
+    ElMessage.success('回测完成')
   } catch (error) {
-    ElMessage.error(`回测失败: ${error}`);
-    currentStep.value = 1;
+    ElMessage.error(`回测失败: ${error}`)
+    currentStep.value = 1
   } finally {
-    isRunning.value = false;
-    nextTick(() => renderChart());
+    isRunning.value = false
+    nextTick(() => renderChart())
   }
 }
 
 // 模拟进度
 function simulateProgress() {
-  const totalBars = Math.floor(Math.random() * 5000) + 5000;
-  const duration = Math.random() * 5000 + 5000; // 5-10秒
-  const interval = 100;
-  let elapsed = 0;
+  const totalBars = Math.floor(Math.random() * 5000) + 5000
+  const duration = Math.random() * 5000 + 5000 // 5-10秒
+  const interval = 100
+  let elapsed = 0
 
   const timer = setInterval(() => {
-    elapsed += interval;
-    const progress = Math.min((elapsed / duration) * 100, 95);
-    const processed = Math.floor((progress / 100) * totalBars);
+    elapsed += interval
+    const progress = Math.min((elapsed / duration) * 100, 95)
+    const processed = Math.floor((progress / 100) * totalBars)
 
-    progressPercent.value = Math.floor(progress);
-    processedBars.value = processed;
-    currentCapital.value = backtestConfig.value.initialCapital * (1 + (progress / 100) * (Math.random() * 0.4 - 0.1));
+    progressPercent.value = Math.floor(progress)
+    processedBars.value = processed
+    currentCapital.value =
+      backtestConfig.value.initialCapital * (1 + (progress / 100) * (Math.random() * 0.4 - 0.1))
 
     // 计算剩余时间
-    const remainingMs = duration - elapsed;
-    const minutes = Math.floor(remainingMs / 60000);
-    const seconds = Math.floor((remainingMs % 60000) / 1000);
-    estimatedTime.value = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+    const remainingMs = duration - elapsed
+    const minutes = Math.floor(remainingMs / 60000)
+    const seconds = Math.floor((remainingMs % 60000) / 1000)
+    estimatedTime.value = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`
 
     if (progress >= 95 || !isRunning.value) {
-      clearInterval(timer);
+      clearInterval(timer)
     }
-  }, interval);
+  }, interval)
 }
 
 function renderChart() {
-  if (!equityChartRef.value || !backtestResult.value) return;
+  if (!equityChartRef.value || !backtestResult.value) return
 
   if (!equityChart) {
-    equityChart = echarts.init(equityChartRef.value);
+    equityChart = echarts.init(equityChartRef.value)
   }
 
   const option: EChartsOption = {
@@ -838,11 +883,12 @@ function renderChart() {
       borderColor: '#409eff',
       textStyle: { color: '#fff' },
       formatter: (params: any) => {
-        const data = params[0];
-        const value = chartType.value === 'equity'
-          ? `资金: ${formatCurrency(data.value)}`
-          : `回撤: ${Math.abs(data.value).toFixed(2)}%`;
-        return `第${data.dataIndex + 1}笔交易<br/>${value}`;
+        const data = params[0]
+        const value =
+          chartType.value === 'equity'
+            ? `资金: ${formatCurrency(data.value)}`
+            : `回撤: ${Math.abs(data.value).toFixed(2)}%`
+        return `第${data.dataIndex + 1}笔交易<br/>${value}`
       },
     },
     xAxis: {
@@ -859,9 +905,9 @@ function renderChart() {
         color: '#6b7280',
         formatter: (value: number) => {
           if (chartType.value === 'equity') {
-            return formatCurrency(value);
+            return formatCurrency(value)
           }
-          return `${Math.abs(value).toFixed(1)}%`;
+          return `${Math.abs(value).toFixed(1)}%`
         },
       },
       splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
@@ -869,9 +915,10 @@ function renderChart() {
     series: [
       {
         type: 'line',
-        data: chartType.value === 'equity'
-          ? backtestResult.value.equityCurve
-          : backtestResult.value.drawdownCurve,
+        data:
+          chartType.value === 'equity'
+            ? backtestResult.value.equityCurve
+            : backtestResult.value.drawdownCurve,
         smooth: true,
         symbol: 'circle',
         symbolSize: 6,
@@ -880,25 +927,34 @@ function renderChart() {
           width: 3,
           color: chartType.value === 'equity' ? '#409eff' : '#f56c6c',
         },
-        areaStyle: chartType.value === 'equity' ? {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
-              { offset: 1, color: 'rgba(64, 158, 255, 0.05)' },
-            ],
-          },
-        } : {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(245, 108, 108, 0.3)' },
-              { offset: 1, color: 'rgba(245, 108, 108, 0.05)' },
-            ],
-          },
-        },
+        areaStyle:
+          chartType.value === 'equity'
+            ? {
+                color: {
+                  type: 'linear',
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+                    { offset: 1, color: 'rgba(64, 158, 255, 0.05)' },
+                  ],
+                },
+              }
+            : {
+                color: {
+                  type: 'linear',
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    { offset: 0, color: 'rgba(245, 108, 108, 0.3)' },
+                    { offset: 1, color: 'rgba(245, 108, 108, 0.05)' },
+                  ],
+                },
+              },
         emphasis: {
           focus: 'series',
           scale: true,
@@ -907,86 +963,88 @@ function renderChart() {
     ],
     animationDuration: 1000,
     animationEasing: 'cubicOut',
-  };
+  }
 
-  equityChart.setOption(option);
+  equityChart.setOption(option)
 }
 
 // 格式化函数
 function formatPercent(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
 }
 
 function formatCurrency(value: number): string {
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function formatPrice(value: number): string {
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function formatAmount(value: number): string {
-  return `${value.toFixed(4)} BTC`;
+  return `${value.toFixed(4)} BTC`
 }
 
 function formatDateTime(date: Date): string {
-  return new Date(date).toLocaleString('zh-CN');
+  return new Date(date).toLocaleString('zh-CN')
 }
 
 function getReturnClass(value: number): string {
-  return value >= 0 ? 'text-success' : 'danger';
+  return value >= 0 ? 'text-success' : 'danger'
 }
 
 function getPnLClass(value: number | null): string {
-  if (value === null) return '';
-  return value >= 0 ? 'text-success' : 'danger';
+  if (value === null) return ''
+  return value >= 0 ? 'text-success' : 'danger'
 }
 
 function getWinRateClass(value: number): string {
-  if (value >= 60) return 'text-success';
-  if (value >= 40) return 'text-warning';
-  return 'danger';
+  if (value >= 60) return 'text-success'
+  if (value >= 40) return 'text-warning'
+  return 'danger'
 }
 
 function getTrendPath(data: number[]): string {
-  if (!data.length) return '';
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
+  if (!data.length) return ''
+  const max = Math.max(...data)
+  const min = Math.min(...data)
+  const range = max - min || 1
 
-  let path = `M 0 ${40 - ((data[0] - min) / range) * 35}`;
+  let path = `M 0 ${40 - ((data[0] - min) / range) * 35}`
   data.forEach((value, i) => {
-    if (i === 0) return;
-    const x = (i / (data.length - 1)) * 100;
-    const y = 40 - ((value - min) / range) * 35;
-    path += ` L ${x} ${y}`;
-  });
+    if (i === 0) return
+    const x = (i / (data.length - 1)) * 100
+    const y = 40 - ((value - min) / range) * 35
+    path += ` L ${x} ${y}`
+  })
 
-  return path;
+  return path
 }
 
 function exportTrades() {
-  ElMessage.success('交易记录导出功能开发中');
+  ElMessage.success('交易记录导出功能开发中')
 }
 
 // 监听图表类型变化
-watch(chartType, () => { renderChart(); });
+watch(chartType, () => {
+  renderChart()
+})
 
 // 生命周期
 onMounted(async () => {
-  const end = new Date();
-  const start = new Date();
-  start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
-  backtestConfig.value.dateRange = [start, end];
-  await loadStrategies();
-});
+  const end = new Date()
+  const start = new Date()
+  start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+  backtestConfig.value.dateRange = [start, end]
+  await loadStrategies()
+})
 
 onUnmounted(() => {
   if (equityChart) {
-    equityChart.dispose();
-    equityChart = null;
+    equityChart.dispose()
+    equityChart = null
   }
-});
+})
 </script>
 
 <style scoped lang="scss">
@@ -1227,7 +1285,9 @@ onUnmounted(() => {
   }
 
   @keyframes shine {
-    to { left: 100%; }
+    to {
+      left: 100%;
+    }
   }
 
   .progress-stats {
@@ -1253,9 +1313,15 @@ onUnmounted(() => {
       justify-content: center;
       color: white;
 
-      &.blue { background: rgba(96, 165, 250, 0.3); }
-      &.purple { background: rgba(139, 92, 246, 0.3); }
-      &.green { background: rgba(74, 222, 128, 0.3); }
+      &.blue {
+        background: rgba(96, 165, 250, 0.3);
+      }
+      &.purple {
+        background: rgba(139, 92, 246, 0.3);
+      }
+      &.green {
+        background: rgba(74, 222, 128, 0.3);
+      }
     }
 
     .stat-content {
@@ -1316,10 +1382,18 @@ onUnmounted(() => {
       transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    &.primary &__bg { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-    &.success &__bg { background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); }
-    &.warning &__bg { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-    &.info &__bg { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+    &.primary &__bg {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+    &.success &__bg {
+      background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
+    }
+    &.warning &__bg {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    &.info &__bg {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    }
 
     .stat-icon {
       width: 60px;
@@ -1332,10 +1406,18 @@ onUnmounted(() => {
       z-index: 1;
       transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-      &.primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-      &.success { background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); }
-      &.warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-      &.info { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+      &.primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      }
+      &.success {
+        background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
+      }
+      &.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      }
+      &.info {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      }
     }
 
     &:hover .stat-icon {
@@ -1421,10 +1503,18 @@ onUnmounted(() => {
       justify-content: center;
       color: white;
 
-      &.blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-      &.green { background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); }
-      &.purple { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-      &.orange { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+      &.blue {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      }
+      &.green {
+        background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
+      }
+      &.purple {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      }
+      &.orange {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      }
     }
   }
 
@@ -1544,7 +1634,11 @@ onUnmounted(() => {
       transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 
       &:hover {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%) !important;
+        background: linear-gradient(
+          135deg,
+          rgba(102, 126, 234, 0.05) 0%,
+          rgba(118, 75, 162, 0.05) 100%
+        ) !important;
       }
     }
   }

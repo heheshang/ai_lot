@@ -175,28 +175,9 @@ impl Database {
         if let Some(service) = &*service_guard {
             service.clone()
         } else {
-            let db = crate::infrastructure::Database {
-                pool: self.pool.clone(),
-                event_bus: self.event_bus.clone(),
-                strategy_engine: self.strategy_engine.clone(),
-                exchange: self.exchange.clone(),
-                trade_service: Arc::new(RwLock::new(None)),
-            };
-            let service = Arc::new(TradeService::new(self.exchange.clone(), db));
-            *service_guard = Some(service.clone());
-            service
-        }
-    }
-
-    /// Create a Database instance suitable for TradeService
-    /// This creates a new Database wrapper with the same pool but cloned references
-    pub fn as_trade_db(&self) -> crate::infrastructure::Database {
-        crate::infrastructure::Database {
-            pool: self.pool.clone(),
-            event_bus: self.event_bus.clone(),
-            strategy_engine: self.strategy_engine.clone(),
-            exchange: self.exchange.clone(),
-            trade_service: Arc::new(RwLock::new(None)),
+            let new_service = Arc::new(TradeService::new(self.exchange.clone(), self.pool.clone()));
+            *service_guard = Some(new_service.clone());
+            new_service
         }
     }
 }

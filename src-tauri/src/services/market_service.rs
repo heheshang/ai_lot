@@ -156,7 +156,7 @@ impl MarketService {
             .await
             .ok_or_else(|| anyhow!("Exchange not found"))?;
 
-        let interval_enum = Interval::from_str(interval)
+        let interval_enum = Interval::parse(interval)
             .ok_or_else(|| anyhow!("Invalid interval: {}", interval))?;
 
         let klines = exchange.get_klines(symbol, interval_enum, limit).await?;

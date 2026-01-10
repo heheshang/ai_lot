@@ -1,3 +1,4 @@
+use crate::core::response::{ApiResponse, ApiError};
 use crate::core::strategy::ScriptExecutor;
 use crate::core::trade::types::Kline;
 use serde_json::json;
@@ -7,20 +8,32 @@ use serde_json::json;
 pub async fn strategy_test_execute(
     code: String,
     parameters: String,
-) -> Result<String, String> {
-    log::info!("Testing strategy code execution");
+) -> Result<ApiResponse<String>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    log::info!("[{}] Testing strategy code execution", request_id);
 
     // 解析参数
-    let params: serde_json::Value = serde_json::from_str(&parameters)
-        .map_err(|e| format!("Invalid parameters JSON: {}", e))?;
+    let params: serde_json::Value = match serde_json::from_str(&parameters) {
+        Ok(params) => params,
+        Err(e) => {
+            return Ok(ApiResponse::error(ApiError::validation_failed("parameters", format!("Invalid JSON: {}", e))).with_request_id(request_id));
+        }
+    };
 
     // 创建执行器
-    let executor = ScriptExecutor::new()
-        .map_err(|e| format!("Failed to create executor: {}", e))?;
+    let executor = match ScriptExecutor::new() {
+        Ok(executor) => executor,
+        Err(e) => {
+            log::error!("[{}] Failed to create executor: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("创建执行器失败")).with_request_id(request_id));
+        }
+    };
 
     // 执行 onInit
-    executor.on_init(&code, &params)
-        .map_err(|e| format!("onInit failed: {}", e))?;
+    if let Err(e) = executor.on_init(&code, &params) {
+        log::error!("[{}] onInit failed: {}", request_id, e);
+        return Ok(ApiResponse::error(ApiError::operation_failed(format!("onInit失败: {}", e))).with_request_id(request_id));
+    }
 
     // 创建测试 K线
     let test_kline = Kline {
@@ -36,12 +49,19 @@ pub async fn strategy_test_execute(
     };
 
     // 执行 onBar
-    let signal = executor.on_bar(&code, &test_kline, &params, &[])
-        .map_err(|e| format!("onBar failed: {}", e))?;
+    let signal = match executor.on_bar(&code, &test_kline, &params, &[]) {
+        Ok(signal) => signal,
+        Err(e) => {
+            log::error!("[{}] onBar failed: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed(format!("onBar失败: {}", e))).with_request_id(request_id));
+        }
+    };
 
     // 执行 onStop
-    executor.on_stop(&code)
-        .map_err(|e| format!("onStop failed: {}", e))?;
+    if let Err(e) = executor.on_stop(&code) {
+        log::error!("[{}] onStop failed: {}", request_id, e);
+        return Ok(ApiResponse::error(ApiError::operation_failed(format!("onStop失败: {}", e))).with_request_id(request_id));
+    }
 
     // 返回结果
     let result = if let Some(sig) = signal {
@@ -63,22 +83,30 @@ pub async fn strategy_test_execute(
         }).to_string()
     };
 
-    Ok(result)
+    Ok(ApiResponse::success(result).with_request_id(request_id))
 }
 
 /// 验证策略代码语法
 #[tauri::command]
-pub async fn strategy_validate_code(code: String) -> Result<bool, String> {
-    log::info!("Validating strategy code syntax");
+pub async fn strategy_validate_code(code: String) -> Result<ApiResponse<bool>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    log::info!("[{}] Validating strategy code syntax", request_id);
 
     // 尝试创建执行器并验证代码
-    let executor = ScriptExecutor::new()
-        .map_err(|e| format!("Failed to create executor: {}", e))?;
+    let executor = match ScriptExecutor::new() {
+        Ok(executor) => executor,
+        Err(e) => {
+            log::error!("[{}] Failed to create executor: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("创建执行器失败")).with_request_id(request_id));
+        }
+    };
 
     // 尝试执行代码（语法检查）
     let params = json!({});
-    executor.on_init(&code, &params)
-        .map_err(|e| format!("Syntax error: {}", e))?;
+    if let Err(e) = executor.on_init(&code, &params) {
+        log::error!("[{}] Syntax error: {}", request_id, e);
+        return Ok(ApiResponse::error(ApiError::operation_failed(format!("语法错误: {}", e))).with_request_id(request_id));
+    }
 
-    Ok(true)
+    Ok(ApiResponse::success(true).with_request_id(request_id))
 }

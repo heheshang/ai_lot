@@ -16,9 +16,22 @@
         <div class="brand-logo">
           <div class="logo-icon">
             <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M20 8 L20 20 L28 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="20" cy="20" r="3" fill="currentColor"/>
+              <circle
+                cx="20"
+                cy="20"
+                r="18"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M20 8 L20 20 L28 24"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle cx="20" cy="20" r="3" fill="currentColor" />
             </svg>
           </div>
         </div>
@@ -68,10 +81,7 @@
               @keyup.enter="handleLogin"
             >
               <template #suffix>
-                <el-icon
-                  class="password-toggle"
-                  @click="passwordVisible = !passwordVisible"
-                >
+                <el-icon class="password-toggle" @click="passwordVisible = !passwordVisible">
                   <View v-if="passwordVisible" />
                   <Hide v-else />
                 </el-icon>
@@ -89,12 +99,7 @@
         </div>
 
         <el-form-item>
-          <el-button
-            type="primary"
-            :loading="loading"
-            class="login-button"
-            @click="handleLogin"
-          >
+          <el-button type="primary" :loading="loading" class="login-button" @click="handleLogin">
             <span v-if="!loading">登录</span>
             <span v-else>登录中...</span>
           </el-button>
@@ -104,11 +109,6 @@
       <div class="login-footer">
         <div class="footer-divider">
           <span></span>
-          <span class="text">默认账户</span>
-          <span></span>
-        </div>
-        <div class="default-account">
-          <el-tag type="info" size="small" effect="plain">admin / admin123</el-tag>
         </div>
       </div>
     </el-card>
@@ -121,28 +121,28 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted, onUnmounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
-import { User, Lock, View, Hide } from '@element-plus/icons-vue';
-import { useUserStore } from '@/store';
+import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { User, Lock, View, Hide } from '@element-plus/icons-vue'
+import { useUserStore } from '@/store'
 
-const router = useRouter();
-const route = useRoute();
-const userStore = useUserStore();
+const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
 
-const formRef = ref<FormInstance>();
-const loading = ref(false);
-const cardLoaded = ref(false);
-const passwordVisible = ref(false);
-const focusedField = ref('');
-const particleCanvas = ref<HTMLCanvasElement>();
+const formRef = ref<FormInstance>()
+const loading = ref(false)
+const cardLoaded = ref(false)
+const passwordVisible = ref(false)
+const focusedField = ref('')
+const particleCanvas = ref<HTMLCanvasElement>()
 
 const form = reactive({
   username: '',
   password: '',
   rememberMe: false,
-});
+})
 
 const rules: FormRules = {
   username: [
@@ -153,66 +153,66 @@ const rules: FormRules = {
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 50, message: '密码长度在 6 到 50 个字符', trigger: 'blur' },
   ],
-};
+}
 
 // 粒子动画
 class ParticleSystem {
-  private canvas: HTMLCanvasElement;
-  private ctx: CanvasRenderingContext2D;
-  private particles: Particle[] = [];
-  private animationId: number | null = null;
+  private canvas: HTMLCanvasElement
+  private ctx: CanvasRenderingContext2D
+  private particles: Particle[] = []
+  private animationId: number | null = null
 
   constructor(canvas: HTMLCanvasElement) {
-    this.canvas = canvas;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('无法获取 Canvas 上下文');
-    this.ctx = ctx;
-    this.resize();
-    this.initParticles();
-    window.addEventListener('resize', () => this.resize());
+    this.canvas = canvas
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('无法获取 Canvas 上下文')
+    this.ctx = ctx
+    this.resize()
+    this.initParticles()
+    window.addEventListener('resize', () => this.resize())
   }
 
   private resize() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    this.canvas.width = window.innerWidth
+    this.canvas.height = window.innerHeight
   }
 
   private initParticles() {
-    const count = Math.floor((this.canvas.width * this.canvas.height) / 15000);
-    this.particles = [];
+    const count = Math.floor((this.canvas.width * this.canvas.height) / 15000)
+    this.particles = []
     for (let i = 0; i < count; i++) {
-      this.particles.push(new Particle(this.canvas.width, this.canvas.height));
+      this.particles.push(new Particle(this.canvas.width, this.canvas.height))
     }
   }
 
   public animate() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
 
-    this.particles.forEach(particle => {
-      particle.update();
-      particle.draw(this.ctx);
-    });
+    this.particles.forEach((particle) => {
+      particle.update()
+      particle.draw(this.ctx)
+    })
 
     // 绘制连线
-    this.drawConnections();
+    this.drawConnections()
 
-    this.animationId = requestAnimationFrame(() => this.animate());
+    this.animationId = requestAnimationFrame(() => this.animate())
   }
 
   private drawConnections() {
     for (let i = 0; i < this.particles.length; i++) {
       for (let j = i + 1; j < this.particles.length; j++) {
-        const dx = this.particles[i].x - this.particles[j].x;
-        const dy = this.particles[i].y - this.particles[j].y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const dx = this.particles[i].x - this.particles[j].x
+        const dy = this.particles[i].y - this.particles[j].y
+        const distance = Math.sqrt(dx * dx + dy * dy)
 
         if (distance < 120) {
-          this.ctx.beginPath();
-          this.ctx.strokeStyle = `rgba(102, 126, 234, ${0.15 * (1 - distance / 120)})`;
-          this.ctx.lineWidth = 1;
-          this.ctx.moveTo(this.particles[i].x, this.particles[i].y);
-          this.ctx.lineTo(this.particles[j].x, this.particles[j].y);
-          this.ctx.stroke();
+          this.ctx.beginPath()
+          this.ctx.strokeStyle = `rgba(102, 126, 234, ${0.15 * (1 - distance / 120)})`
+          this.ctx.lineWidth = 1
+          this.ctx.moveTo(this.particles[i].x, this.particles[i].y)
+          this.ctx.lineTo(this.particles[j].x, this.particles[j].y)
+          this.ctx.stroke()
         }
       }
     }
@@ -220,92 +220,92 @@ class ParticleSystem {
 
   public destroy() {
     if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
+      cancelAnimationFrame(this.animationId)
     }
-    window.removeEventListener('resize', () => this.resize());
+    window.removeEventListener('resize', () => this.resize())
   }
 }
 
 class Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  radius: number;
-  opacity: number;
+  x: number
+  y: number
+  vx: number
+  vy: number
+  radius: number
+  opacity: number
 
   constructor(canvasWidth: number, canvasHeight: number) {
-    this.x = Math.random() * canvasWidth;
-    this.y = Math.random() * canvasHeight;
-    this.vx = (Math.random() - 0.5) * 0.5;
-    this.vy = (Math.random() - 0.5) * 0.5;
-    this.radius = Math.random() * 2 + 1;
-    this.opacity = Math.random() * 0.5 + 0.2;
+    this.x = Math.random() * canvasWidth
+    this.y = Math.random() * canvasHeight
+    this.vx = (Math.random() - 0.5) * 0.5
+    this.vy = (Math.random() - 0.5) * 0.5
+    this.radius = Math.random() * 2 + 1
+    this.opacity = Math.random() * 0.5 + 0.2
   }
 
   update() {
-    this.x += this.vx;
-    this.y += this.vy;
+    this.x += this.vx
+    this.y += this.vy
 
     // 边界反弹
-    if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
-    if (this.y < 0 || this.y > window.innerHeight) this.vy *= -1;
+    if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1
+    if (this.y < 0 || this.y > window.innerHeight) this.vy *= -1
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.beginPath();
-    ctx.fillStyle = `rgba(102, 126, 234, ${this.opacity})`;
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath()
+    ctx.fillStyle = `rgba(102, 126, 234, ${this.opacity})`
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2)
+    ctx.fill()
   }
 }
 
-let particleSystem: ParticleSystem | null = null;
+let particleSystem: ParticleSystem | null = null
 
 onMounted(() => {
   // 卡片入场动画
   setTimeout(() => {
-    cardLoaded.value = true;
-  }, 100);
+    cardLoaded.value = true
+  }, 100)
 
   // 初始化粒子系统
   if (particleCanvas.value) {
-    particleSystem = new ParticleSystem(particleCanvas.value);
-    particleSystem.animate();
+    particleSystem = new ParticleSystem(particleCanvas.value)
+    particleSystem.animate()
   }
-});
+})
 
 onUnmounted(() => {
   if (particleSystem) {
-    particleSystem.destroy();
+    particleSystem.destroy()
   }
-});
+})
 
 async function handleLogin() {
-  if (!formRef.value) return;
+  if (!formRef.value) return
 
-  const valid = await formRef.value.validate().catch(() => false);
-  if (!valid) return;
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
 
-  loading.value = true;
+  loading.value = true
 
   try {
     const success = await userStore.login({
       username: form.username,
       password: form.password,
-    });
+    })
 
     if (success) {
-      ElMessage.success('登录成功');
-      const redirect = (route.query.redirect as string) || '/dashboard';
-      router.push(redirect);
+      ElMessage.success('登录成功')
+      const redirect = (route.query.redirect as string) || '/dashboard'
+      router.push(redirect)
     } else {
-      ElMessage.error('登录失败，请检查用户名和密码');
+      ElMessage.error('登录失败，请检查用户名和密码')
     }
   } catch (error) {
-    ElMessage.error('登录失败：' + (error as Error).message);
+    ElMessage.error('登录失败：' + (error as Error).message)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 </script>
@@ -374,7 +374,8 @@ async function handleLogin() {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) rotate(0deg);
   }
   25% {
@@ -397,8 +398,9 @@ async function handleLogin() {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2),
-              0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   padding: 16px;
   opacity: 0;
   transform: translateY(30px) scale(0.95);
@@ -465,7 +467,8 @@ async function handleLogin() {
 }
 
 @keyframes logoFloat {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
   50% {

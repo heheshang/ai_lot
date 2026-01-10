@@ -10,6 +10,12 @@ use serde_json::Value;
 /// OKX data converter
 pub struct OkxConverter;
 
+impl Default for OkxConverter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OkxConverter {
     pub fn new() -> Self {
         Self
@@ -34,11 +40,11 @@ impl MarketDataConverter for OkxConverter {
             price_change: helpers::parse_f64(data.get("last").unwrap_or(&Value::Null), "last")?
                 - helpers::parse_f64(data.get("open24h").unwrap_or(&Value::Null), "open24h")?,
             price_change_percent: helpers::parse_f64(data.get("changePercent").unwrap_or(&Value::Null), "changePercent")
-                .or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+                .or(Ok::<f64, ConversionError>(0.0))?,
             high_24h: helpers::parse_f64(data.get("high24h").unwrap_or(&Value::Null), "high24h")?,
             low_24h: helpers::parse_f64(data.get("low24h").unwrap_or(&Value::Null), "low24h")?,
             volume_24h: helpers::parse_f64(data.get("vol24h").unwrap_or(&Value::Null), "vol24h")
-                .or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+                .or(Ok::<f64, ConversionError>(0.0))?,
             timestamp: helpers::normalize_timestamp(data.get("ts").unwrap_or(&Value::Null), "ts")?,
         })
     }
@@ -58,7 +64,7 @@ impl MarketDataConverter for OkxConverter {
                     low: helpers::parse_f64(candle.get("l").unwrap_or(&Value::Null), "l")?,
                     close: helpers::parse_f64(candle.get("c").unwrap_or(&Value::Null), "c")?,
                     volume: helpers::parse_f64(candle.get("vol").unwrap_or(&Value::Null), "vol")
-                        .or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+                        .or(Ok::<f64, ConversionError>(0.0))?,
                     quote_volume: candle.get("volCcy").and_then(|v| v.as_str().and_then(|s| s.parse().ok())),
                 });
             }
@@ -74,7 +80,7 @@ impl MarketDataConverter for OkxConverter {
             low: helpers::parse_f64(data.get("l").unwrap_or(&Value::Null), "l")?,
             close: helpers::parse_f64(data.get("c").unwrap_or(&Value::Null), "c")?,
             volume: helpers::parse_f64(data.get("vol").unwrap_or(&Value::Null), "vol")
-                .or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+                .or(Ok::<f64, ConversionError>(0.0))?,
             quote_volume: data.get("volCcy").and_then(|v| v.as_str().and_then(|s| s.parse().ok())),
         })
     }
@@ -122,11 +128,11 @@ impl MarketDataConverter for OkxConverter {
             quantity: helpers::parse_f64(data.get("fillSz").unwrap_or(&Value::Null), "fillSz")
                 .or_else(|_| helpers::parse_f64(data.get("sz").unwrap_or(&Value::Null), "sz"))?,
             filled_quantity: helpers::parse_f64(data.get("fillSz").unwrap_or(&Value::Null), "fillSz")
-                .or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+                .or(Ok::<f64, ConversionError>(0.0))?,
             avg_price: data.get("avgPx").and_then(|v| v.as_str().and_then(|s| s.parse().ok())),
             status,
             commission: helpers::parse_f64(data.get("fee").unwrap_or(&Value::Null), "fee")
-                .or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+                .or(Ok::<f64, ConversionError>(0.0))?,
             created_at: helpers::normalize_timestamp(data.get("cTime").unwrap_or(&Value::Null), "cTime")?,
             filled_at: data.get("uTime").and_then(|v| helpers::normalize_timestamp(v, "uTime").ok()),
         })
@@ -182,9 +188,9 @@ impl MarketDataConverter for OkxConverter {
                     entry_price: helpers::parse_f64(pos_obj.get("avgPx").unwrap_or(&Value::Null), "avgPx")?,
                     current_price: pos_obj.get("last").and_then(|v| v.as_str().and_then(|s| s.parse().ok())),
                     unrealized_pnl: helpers::parse_f64(pos_obj.get("upl").unwrap_or(&Value::Null), "upl")
-                        .or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+                        .or(Ok::<f64, ConversionError>(0.0))?,
                     realized_pnl: helpers::parse_f64(pos_obj.get("realizedPnl").unwrap_or(&Value::Null), "realizedPnl")
-                        .or_else(|_| Ok::<f64, ConversionError>(0.0))?,
+                        .or(Ok::<f64, ConversionError>(0.0))?,
                     opened_at: helpers::normalize_timestamp(pos_obj.get("uTime").unwrap_or(&Value::Null), "uTime")?,
                 });
             }
@@ -204,17 +210,16 @@ impl MarketDataConverter for OkxConverter {
         let common_quotes = ["USDT", "USD", "EUR", "BTC", "ETH", "BNB"];
 
         for quote in &common_quotes {
-            if symbol.ends_with(quote) {
-                let base = &symbol[..symbol.len() - quote.len()];
+            if let Some(base) = symbol.strip_suffix(quote) {
                 return format!("{}-{}", base, quote);
             }
         }
 
         // Default: insert dash after 3 or 4 characters
         if symbol.len() <= 6 {
-            return format!("{}-{}", &symbol[..3], &symbol[3..]);
+            format!("{}-{}", &symbol[..3], &symbol[3..])
         } else {
-            return format!("{}-{}", &symbol[..4], &symbol[4..]);
+            format!("{}-{}", &symbol[..4], &symbol[4..])
         }
     }
 }

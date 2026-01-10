@@ -3,6 +3,7 @@
 //! Tauri commands for accessing strategy debug information including logs,
 //! variables, and performance metrics.
 
+use crate::core::response::{ApiResponse, ApiError};
 use crate::core::strategy::{DebugContext, LogLevel};
 use crate::core::strategy::debug::{DebugLog, PerformanceMetrics};
 
@@ -26,11 +27,15 @@ pub async fn get_strategy_logs(
     min_level: Option<String>,
     since: Option<i64>,
     limit: Option<usize>,
-) -> Result<Vec<DebugLog>, String> {
+) -> Result<ApiResponse<Vec<DebugLog>>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let ctx = get_global_debug();
 
     let mut logs = if let Some(level_str) = min_level {
-        let level = level_str.parse::<LogLevel>().map_err(|e| e)?;
+        let level = match level_str.parse::<LogLevel>() {
+            Ok(level) => level,
+            Err(e) => return Ok(ApiResponse::error(ApiError::invalid_parameter(format!("Invalid log level: {}", e))).with_request_id(request_id)),
+        };
         ctx.get_logs_by_level(level)
     } else if let Some(timestamp) = since {
         ctx.get_logs_since(timestamp)
@@ -46,33 +51,36 @@ pub async fn get_strategy_logs(
         }
     }
 
-    Ok(logs)
+    Ok(ApiResponse::success(logs).with_request_id(request_id))
 }
 
 /// Get performance metrics for a strategy instance
 #[tauri::command]
 pub async fn get_strategy_metrics(
     _instance_id: String,
-) -> Result<PerformanceMetrics, String> {
+) -> Result<ApiResponse<PerformanceMetrics>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let ctx = get_global_debug();
-    Ok(ctx.get_metrics())
+    Ok(ApiResponse::success(ctx.get_metrics()).with_request_id(request_id))
 }
 
 /// Get monitored variables for a strategy instance
 #[tauri::command]
 pub async fn get_strategy_variables(
     _instance_id: String,
-) -> Result<std::collections::HashMap<String, crate::core::strategy::debug::DebugVariable>, String> {
+) -> Result<ApiResponse<std::collections::HashMap<String, crate::core::strategy::debug::DebugVariable>>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let ctx = get_global_debug();
-    Ok(ctx.get_variables())
+    Ok(ApiResponse::success(ctx.get_variables()).with_request_id(request_id))
 }
 
 /// Clear debug logs for a strategy instance
 #[tauri::command]
-pub async fn clear_strategy_logs(_instance_id: String) -> Result<(), String> {
+pub async fn clear_strategy_logs(_instance_id: String) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let ctx = get_global_debug();
     ctx.clear_logs();
-    Ok(())
+    Ok(ApiResponse::success_empty().with_request_id(request_id))
 }
 
 /// Set the minimum log level for a strategy instance
@@ -80,23 +88,29 @@ pub async fn clear_strategy_logs(_instance_id: String) -> Result<(), String> {
 pub async fn set_strategy_log_level(
     _instance_id: String,
     level: String,
-) -> Result<(), String> {
-    let log_level = level.parse::<LogLevel>().map_err(|e| e)?;
+) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let log_level = match level.parse::<LogLevel>() {
+        Ok(level) => level,
+        Err(e) => return Ok(ApiResponse::error(ApiError::invalid_parameter(format!("Invalid log level: {}", e))).with_request_id(request_id)),
+    };
     let ctx = get_global_debug();
     ctx.set_min_log_level(log_level);
-    Ok(())
+    Ok(ApiResponse::success_empty().with_request_id(request_id))
 }
 
 /// Get the current log level for a strategy instance
 #[tauri::command]
-pub async fn get_strategy_log_level(_instance_id: String) -> Result<String, String> {
+pub async fn get_strategy_log_level(_instance_id: String) -> Result<ApiResponse<String>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let ctx = get_global_debug();
-    Ok(ctx.get_min_log_level().to_string())
+    Ok(ApiResponse::success(ctx.get_min_log_level().to_string()).with_request_id(request_id))
 }
 
 /// Test command to generate sample debug logs
 #[tauri::command]
-pub async fn generate_test_logs(_instance_id: String) -> Result<(), String> {
+pub async fn generate_test_logs(_instance_id: String) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let ctx = get_global_debug();
 
     ctx.debug("This is a debug message".to_string());
@@ -110,7 +124,7 @@ pub async fn generate_test_logs(_instance_id: String) -> Result<(), String> {
     ctx.set_variable("quantity".to_string(), serde_json::json!(0.1));
     ctx.set_variable("signal".to_string(), serde_json::json!("buy"));
 
-    Ok(())
+    Ok(ApiResponse::success_empty().with_request_id(request_id))
 }
 
 #[cfg(test)]

@@ -255,10 +255,10 @@ impl OkxExchange {
             symbol.to_uppercase()
         } else {
             // Try to add dash before USDT
-            if symbol.ends_with("USDT") {
-                format!("{}-USDT", &symbol[..symbol.len() - 4])
-            } else if symbol.ends_with("USDC") {
-                format!("{}-USDC", &symbol[..symbol.len() - 4])
+            if let Some(base) = symbol.strip_suffix("USDT") {
+                format!("{}-USDT", base)
+            } else if let Some(base) = symbol.strip_suffix("USDC") {
+                format!("{}-USDC", base)
             } else {
                 symbol.to_uppercase()
             }
@@ -303,7 +303,7 @@ impl OkxExchange {
         Ok(Kline {
             symbol: self.normalize_symbol(symbol),
             timeframe: interval.as_str().to_string(),
-            timestamp: arr.get(0).and_then(|v| v.as_i64()).unwrap_or(0),
+            timestamp: arr.first().and_then(|v| v.as_i64()).unwrap_or(0),
             open: arr.get(1).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
             high: arr.get(2).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
             low: arr.get(3).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
@@ -650,7 +650,7 @@ impl OkxExchange {
         Ok(Kline {
             symbol: String::new(), // Will be filled by the message handler
             timeframe: interval.as_str().to_string(),
-            timestamp: arr.get(0).and_then(|v| v.as_str()).and_then(|s| s.parse().ok()).unwrap_or(0),
+            timestamp: arr.first().and_then(|v| v.as_str()).and_then(|s| s.parse().ok()).unwrap_or(0),
             open: arr.get(1).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
             high: arr.get(2).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
             low: arr.get(3).and_then(|v| v.as_str()).unwrap_or("0").parse().unwrap_or(0.0),
@@ -754,7 +754,7 @@ impl Exchange for OkxExchange {
         let okx_symbol = self.to_okx_symbol(symbol);
         let path = format!("/api/v5/market/ticker?instId={}", okx_symbol);
 
-        let response = self.client.get(&format!("{}{}", REST_API_BASE, path))
+        let response = self.client.get(format!("{}{}", REST_API_BASE, path))
             .send()
             .await?
             .json::<Value>()
@@ -781,7 +781,7 @@ impl Exchange for OkxExchange {
             okx_symbol, bar_interval, limit
         );
 
-        let response = self.client.get(&format!("{}{}", REST_API_BASE, path))
+        let response = self.client.get(format!("{}{}", REST_API_BASE, path))
             .send()
             .await?
             .json::<Value>()

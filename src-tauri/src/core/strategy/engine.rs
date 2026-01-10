@@ -868,6 +868,44 @@ impl StrategyEngine {
 mod tests {
     use super::*;
 
+    fn create_test_klines() -> Vec<Kline> {
+        vec![
+            Kline {
+                symbol: "BTCUSDT".to_string(),
+                timeframe: "1h".to_string(),
+                timestamp: 1000,
+                open: 50000.0,
+                high: 50500.0,
+                low: 49800.0,
+                close: 50200.0,
+                volume: 100.0,
+                quote_volume: Some(5020000.0),
+            },
+            Kline {
+                symbol: "BTCUSDT".to_string(),
+                timeframe: "1h".to_string(),
+                timestamp: 2000,
+                open: 50200.0,
+                high: 50800.0,
+                low: 50000.0,
+                close: 50600.0,
+                volume: 120.0,
+                quote_volume: Some(6072000.0),
+            },
+            Kline {
+                symbol: "BTCUSDT".to_string(),
+                timeframe: "1h".to_string(),
+                timestamp: 3000,
+                open: 50600.0,
+                high: 51000.0,
+                low: 50400.0,
+                close: 50900.0,
+                volume: 90.0,
+                quote_volume: Some(4581000.0),
+            },
+        ]
+    }
+
     #[test]
     fn test_strategy_config_serialization() {
         let config = StrategyConfig {
@@ -885,6 +923,25 @@ mod tests {
         assert_eq!(decoded.name, config.name);
         assert_eq!(decoded.code, config.code);
         assert_eq!(decoded.symbols, config.symbols);
+        assert_eq!(decoded.parameters, config.parameters);
+    }
+
+    #[test]
+    fn test_strategy_config_with_id() {
+        let config = StrategyConfig {
+            id: Some("test-id-123".to_string()),
+            name: "Test Strategy".to_string(),
+            code: "test code".to_string(),
+            parameters: serde_json::json!({}),
+            symbols: vec![],
+            timeframes: vec![],
+        };
+
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(json.contains("\"id\":\"test-id-123\""));
+
+        let decoded: StrategyConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.id, Some("test-id-123".to_string()));
     }
 
     #[test]
@@ -895,5 +952,116 @@ mod tests {
 
         let decoded: InstanceStatus = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, InstanceStatus::Error);
+    }
+
+    #[test]
+    fn test_instance_status_all_variants() {
+        for status in [
+            InstanceStatus::Starting,
+            InstanceStatus::Running,
+            InstanceStatus::Paused,
+            InstanceStatus::Stopping,
+            InstanceStatus::Stopped,
+            InstanceStatus::Error,
+        ] {
+            let json = serde_json::to_string(&status).unwrap();
+            let decoded: InstanceStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(decoded, status);
+        }
+    }
+
+    #[test]
+    fn test_instance_info_serialization() {
+        let info = InstanceInfo {
+            id: "test-id".to_string(),
+            name: "Test Strategy".to_string(),
+            status: InstanceStatus::Running,
+            symbols: vec!["BTCUSDT".to_string()],
+            timeframes: vec!["1h".to_string()],
+            start_time: Some(1234567890),
+            stats: Some(InstanceStats {
+                trade_count: 10,
+                pnl: 500.5,
+            }),
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        let decoded: InstanceInfo = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(decoded.id, info.id);
+        assert_eq!(decoded.name, info.name);
+        assert_eq!(decoded.status, info.status);
+        assert_eq!(decoded.stats.unwrap().trade_count, 10);
+    }
+
+    #[test]
+    fn test_instance_stats_serialization() {
+        let stats = InstanceStats {
+            trade_count: 5,
+            pnl: -100.5,
+        };
+
+        let json = serde_json::to_string(&stats).unwrap();
+        assert!(json.contains("tradeCount"));
+        assert!(json.contains("pnl"));
+
+        let decoded: InstanceStats = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.trade_count, 5);
+        assert!((decoded.pnl - (-100.5)).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_strategy_config_default_parameters() {
+        let config = StrategyConfig {
+            id: None,
+            name: "Test".to_string(),
+            code: "test".to_string(),
+            parameters: serde_json::json!({}),
+            symbols: vec![],
+            timeframes: vec![],
+        };
+
+        // Parameters should be empty object
+        assert_eq!(config.parameters, serde_json::json!({}));
+    }
+
+    #[test]
+    fn test_strategy_config_complex_parameters() {
+        let complex_params = serde_json::json!({
+            "quantity": 0.5,
+            "stopLoss": 0.02,
+            "takeProfit": 0.05,
+            "enabled": true,
+            "symbols": ["BTCUSDT", "ETHUSDT"]
+        });
+
+        let config = StrategyConfig {
+            id: None,
+            name: "Complex Strategy".to_string(),
+            code: "test code".to_string(),
+            parameters: complex_params.clone(),
+            symbols: vec![],
+            timeframes: vec![],
+        };
+
+        let json = serde_json::to_string(&config).unwrap();
+        let decoded: StrategyConfig = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(decoded.parameters, complex_params);
+    }
+
+    #[test]
+    fn test_indicator_calculator_in_strategy_context() {
+        use crate::core::strategy::indicators::IndicatorCalculator;
+
+        let klines = create_test_klines();
+        let calculator = IndicatorCalculator::new(klines);
+
+        // Test SMA calculation
+        let sma = calculator.sma(2);
+        assert_eq!(sma.len(), 3);
+
+        // First value should be None (not enough data)
+        assert!(sma[0].is_none());
     }
 }

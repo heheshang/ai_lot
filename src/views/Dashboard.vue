@@ -17,9 +17,13 @@
             </div>
             <div class="stat-card__info">
               <div class="stat-card__value">
-                <span class="stat-card__value-text" :data-value="stat.rawValue">{{ stat.value }}</span>
+                <span class="stat-card__value-text" :data-value="stat.rawValue">{{
+                  stat.value
+                }}</span>
                 <span v-if="stat.change" class="stat-card__change" :class="stat.changeClass">
-                  <el-icon><CaretTop v-if="stat.changeClass === 'up'" /><CaretBottom v-else /></el-icon>
+                  <el-icon
+                    ><CaretTop v-if="stat.changeClass === 'up'" /><CaretBottom v-else
+                  /></el-icon>
                   {{ stat.change }}
                 </span>
               </div>
@@ -44,15 +48,29 @@
               <span class="card-title">收益曲线</span>
               <div class="card-actions">
                 <el-button-group size="small">
-                  <el-button :type="period === 'day' ? 'primary' : ''" @click="updatePeriod('day')">日</el-button>
-                  <el-button :type="period === 'week' ? 'primary' : ''" @click="updatePeriod('week')">周</el-button>
-                  <el-button :type="period === 'month' ? 'primary' : ''" @click="updatePeriod('month')">月</el-button>
-                  <el-button :type="period === 'year' ? 'primary' : ''" @click="updatePeriod('year')">年</el-button>
+                  <el-button :type="period === 'day' ? 'primary' : ''" @click="updatePeriod('day')"
+                    >日</el-button
+                  >
+                  <el-button
+                    :type="period === 'week' ? 'primary' : ''"
+                    @click="updatePeriod('week')"
+                    >周</el-button
+                  >
+                  <el-button
+                    :type="period === 'month' ? 'primary' : ''"
+                    @click="updatePeriod('month')"
+                    >月</el-button
+                  >
+                  <el-button
+                    :type="period === 'year' ? 'primary' : ''"
+                    @click="updatePeriod('year')"
+                    >年</el-button
+                  >
                 </el-button-group>
               </div>
             </div>
           </template>
-          <div ref="profitChartRef" class="chart-wrapper" style="height: 320px;"></div>
+          <div ref="profitChartRef" class="chart-wrapper" style="height: 320px"></div>
         </el-card>
       </el-col>
 
@@ -62,7 +80,7 @@
           <template #header>
             <span class="card-title">持仓分布</span>
           </template>
-          <div ref="positionChartRef" class="chart-wrapper" style="height: 320px;"></div>
+          <div ref="positionChartRef" class="chart-wrapper" style="height: 320px"></div>
         </el-card>
       </el-col>
     </el-row>
@@ -105,7 +123,11 @@
                 </span>
               </div>
             </div>
-            <el-empty v-if="strategies.length === 0" description="暂无运行中的策略" :image-size="80" />
+            <el-empty
+              v-if="strategies.length === 0"
+              description="暂无运行中的策略"
+              :image-size="80"
+            />
           </div>
         </el-card>
       </el-col>
@@ -159,9 +181,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import * as echarts from 'echarts';
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import * as echarts from 'echarts'
 import {
   Wallet,
   TrendCharts,
@@ -174,22 +196,22 @@ import {
   Setting,
   CaretTop,
   CaretBottom,
-} from '@element-plus/icons-vue';
+} from '@element-plus/icons-vue'
 
-const router = useRouter();
-const period = ref('day');
-const cardEnter = ref(false);
-const profitChartRef = ref<HTMLElement>();
-const positionChartRef = ref<HTMLElement>();
-let profitChart: echarts.ECharts | null = null;
-let positionChart: echarts.ECharts | null = null;
+const router = useRouter()
+const period = ref('day')
+const cardEnter = ref(false)
+const profitChartRef = ref<HTMLElement>()
+const positionChartRef = ref<HTMLElement>()
+let profitChart: echarts.ECharts | null = null
+let positionChart: echarts.ECharts | null = null
 
 // 统计数据
 const stats = ref([
   {
     title: '总资产',
     value: '$125,678.90',
-    rawValue: 125678.90,
+    rawValue: 125678.9,
     icon: Wallet,
     type: 'primary',
     change: '+2.5%',
@@ -226,7 +248,7 @@ const stats = ref([
     changeClass: 'up',
     trend: 'M0,35 Q30,15 60,25 T120,5',
   },
-]);
+])
 
 // 交易统计
 const tradeStats = ref([
@@ -235,12 +257,10 @@ const tradeStats = ref([
   { label: '卖出次数', value: '61', valueClass: 'trade-stat-sell' },
   { label: '成交金额', value: '$1,234,567', valueClass: '' },
   { label: '手续费', value: '$123.45', valueClass: 'text-regular' },
-]);
+])
 
 // 运行中策略数量
-const runningCount = computed(() =>
-  strategies.value.filter(s => s.status === 'running').length
-);
+const runningCount = computed(() => strategies.value.filter((s) => s.status === 'running').length)
 
 // 策略列表
 const strategies = ref([
@@ -265,7 +285,7 @@ const strategies = ref([
     statusText: '已停止',
     time: '已停止',
   },
-]);
+])
 
 // 系统活动
 const activities = ref([
@@ -274,7 +294,7 @@ const activities = ref([
   { text: '系统自动备份完成', time: '15分钟前', type: 'default' },
   { text: '新增策略 "RSI交易"', time: '1小时前', type: 'warning' },
   { text: '风险预警触发，仓位已调整', time: '2小时前', type: 'danger' },
-]);
+])
 
 // 快捷操作
 const quickActions = ref([
@@ -326,82 +346,82 @@ const quickActions = ref([
     bg: 'linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%)',
     onClick: () => router.push('/settings'),
   },
-]);
+])
 
 // 数字滚动动画
 function animateNumber(element: HTMLElement, targetValue: number, duration: number = 1500) {
-  const startValue = 0;
-  const startTime = performance.now();
-  const isCurrency = element.textContent?.includes('$');
-  const hasPlus = element.textContent?.startsWith('+');
+  const startValue = 0
+  const startTime = performance.now()
+  const isCurrency = element.textContent?.includes('$')
+  const hasPlus = element.textContent?.startsWith('+')
 
   function update(currentTime: number) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
     // 使用 easeOutExpo 缓动
-    const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-    const currentValue = startValue + (targetValue - startValue) * eased;
+    const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress)
+    const currentValue = startValue + (targetValue - startValue) * eased
 
     if (isCurrency) {
-      const formatted = Math.floor(currentValue).toLocaleString('en-US');
-      element.textContent = `${hasPlus ? '+' : ''}$${formatted}.${(currentValue % 1).toFixed(2).slice(2)}`;
+      const formatted = Math.floor(currentValue).toLocaleString('en-US')
+      element.textContent = `${hasPlus ? '+' : ''}$${formatted}.${(currentValue % 1).toFixed(2).slice(2)}`
     } else {
-      element.textContent = Math.floor(currentValue).toString();
+      element.textContent = Math.floor(currentValue).toString()
     }
 
     if (progress < 1) {
-      requestAnimationFrame(update);
+      requestAnimationFrame(update)
     }
   }
 
-  requestAnimationFrame(update);
+  requestAnimationFrame(update)
 }
 
 // 初始化数字动画
 function initNumberAnimations() {
   setTimeout(() => {
-    cardEnter.value = true;
-    const valueElements = document.querySelectorAll('.stat-card__value-text');
+    cardEnter.value = true
+    const valueElements = document.querySelectorAll('.stat-card__value-text')
     valueElements.forEach((el, index) => {
-      const rawValue = parseFloat(el.getAttribute('data-value') || '0');
+      const rawValue = parseFloat(el.getAttribute('data-value') || '0')
       setTimeout(() => {
-        animateNumber(el as HTMLElement, rawValue, 1500);
-      }, index * 100);
-    });
-  }, 100);
+        animateNumber(el as HTMLElement, rawValue, 1500)
+      }, index * 100)
+    })
+  }, 100)
 }
 
 // 更新时间周期
 function updatePeriod(newPeriod: string) {
-  period.value = newPeriod;
-  updateProfitChart();
+  period.value = newPeriod
+  updateProfitChart()
 }
 
 // 初始化收益图表
 function initProfitChart() {
-  if (!profitChartRef.value) return;
+  if (!profitChartRef.value) return
 
-  profitChart = echarts.init(profitChartRef.value);
-  updateProfitChart();
+  profitChart = echarts.init(profitChartRef.value)
+  updateProfitChart()
 }
 
 // 更新收益图表
 function updateProfitChart() {
-  if (!profitChart) return;
+  if (!profitChart) return
 
   const dataMap: Record<string, number[]> = {
     day: [120000, 121500, 122800, 124200, 123800, 125100, 125679],
     week: [115000, 118000, 121500, 120000, 123000, 124500, 125679],
     month: [100000, 105000, 110000, 108000, 115000, 120000, 125679],
     year: [50000, 70000, 65000, 85000, 90000, 110000, 125679],
-  };
+  }
 
   const labelMap: Record<string, string[]> = {
     day: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
     week: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
     month: ['第1周', '第2周', '第3周', '第4周', '第5周', '第6周', '第7周'],
     year: ['1月', '3月', '5月', '7月', '9月', '11月', '12月'],
-  };
+  }
 
   const option = {
     tooltip: {
@@ -410,8 +430,8 @@ function updateProfitChart() {
       borderColor: '#409eff',
       textStyle: { color: '#fff' },
       formatter: (params: any) => {
-        const param = params[0];
-        return `${param.axisValue}<br/>收益: <span style="color: #409eff; font-weight: bold">$${param.data.toLocaleString()}</span>`;
+        const param = params[0]
+        return `${param.axisValue}<br/>收益: <span style="color: #409eff; font-weight: bold">$${param.data.toLocaleString()}</span>`
       },
     },
     grid: {
@@ -460,17 +480,17 @@ function updateProfitChart() {
       },
     ],
     animationDuration: 1000,
-    animationEasing: 'cubicOut',
-  };
+    animationEasing: 'cubicOut' as const,
+  }
 
-  profitChart.setOption(option, true);
+  profitChart.setOption(option, true)
 }
 
 // 初始化持仓图表
 function initPositionChart() {
-  if (!positionChartRef.value) return;
+  if (!positionChartRef.value) return
 
-  positionChart = echarts.init(positionChartRef.value);
+  positionChart = echarts.init(positionChartRef.value)
 
   const option = {
     tooltip: {
@@ -515,38 +535,38 @@ function initPositionChart() {
         ],
         animationType: 'scale',
         animationEasing: 'elasticOut',
-        animationDelay: (idx: number) => Math.random() * 200,
+        animationDelay: () => Math.random() * 200,
       },
     ],
-  };
+  }
 
-  positionChart.setOption(option);
+  positionChart.setOption(option)
 }
 
 // 处理统计卡片点击
 function handleStatClick(stat: any) {
   // 可以根据点击的卡片跳转到相应页面
-  console.log('Clicked stat:', stat.title);
+  console.log('Clicked stat:', stat.title)
 }
 
 // 处理窗口大小变化
 const handleResize = () => {
-  profitChart?.resize();
-  positionChart?.resize();
-};
+  profitChart?.resize()
+  positionChart?.resize()
+}
 
 onMounted(() => {
-  initProfitChart();
-  initPositionChart();
-  initNumberAnimations();
-  window.addEventListener('resize', handleResize);
-});
+  initProfitChart()
+  initPositionChart()
+  initNumberAnimations()
+  window.addEventListener('resize', handleResize)
+})
 
 onUnmounted(() => {
-  profitChart?.dispose();
-  positionChart?.dispose();
-  window.removeEventListener('resize', handleResize);
-});
+  profitChart?.dispose()
+  positionChart?.dispose()
+  window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <style scoped lang="scss">
@@ -606,10 +626,18 @@ onUnmounted(() => {
     transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  &.primary &__bg { background: linear-gradient(135deg, #409eff, #66b1ff); }
-  &.success &__bg { background: linear-gradient(135deg, #67c23a, #85ce61); }
-  &.danger &__bg { background: linear-gradient(135deg, #f56c6c, #f78989); }
-  &.warning &__bg { background: linear-gradient(135deg, #e6a23c, #ebb563); }
+  &.primary &__bg {
+    background: linear-gradient(135deg, #409eff, #66b1ff);
+  }
+  &.success &__bg {
+    background: linear-gradient(135deg, #67c23a, #85ce61);
+  }
+  &.danger &__bg {
+    background: linear-gradient(135deg, #f56c6c, #f78989);
+  }
+  &.warning &__bg {
+    background: linear-gradient(135deg, #e6a23c, #ebb563);
+  }
 
   &__content {
     display: flex;
@@ -629,10 +657,22 @@ onUnmounted(() => {
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  &.primary &__icon { background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%); color: #409eff; }
-  &.success &__icon { background: linear-gradient(135deg, #f0f9ff 0%, #e1f3d8 100%); color: #67c23a; }
-  &.danger &__icon { background: linear-gradient(135deg, #fef0f0 0%, #fde2e2 100%); color: #f56c6c; }
-  &.warning &__icon { background: linear-gradient(135deg, #fdf6ec 0%, #faecd8 100%); color: #e6a23c; }
+  &.primary &__icon {
+    background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%);
+    color: #409eff;
+  }
+  &.success &__icon {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e1f3d8 100%);
+    color: #67c23a;
+  }
+  &.danger &__icon {
+    background: linear-gradient(135deg, #fef0f0 0%, #fde2e2 100%);
+    color: #f56c6c;
+  }
+  &.warning &__icon {
+    background: linear-gradient(135deg, #fdf6ec 0%, #faecd8 100%);
+    color: #e6a23c;
+  }
 
   &__info {
     flex: 1;
@@ -698,10 +738,18 @@ onUnmounted(() => {
       height: 100%;
     }
 
-    &.primary svg { color: #409eff; }
-    &.success svg { color: #67c23a; }
-    &.danger svg { color: #f56c6c; }
-    &.warning svg { color: #e6a23c; }
+    &.primary svg {
+      color: #409eff;
+    }
+    &.success svg {
+      color: #67c23a;
+    }
+    &.danger svg {
+      color: #f56c6c;
+    }
+    &.warning svg {
+      color: #e6a23c;
+    }
   }
 }
 
@@ -782,8 +830,12 @@ onUnmounted(() => {
   font-weight: 600;
   color: #303133;
 
-  &.trade-stat-buy { color: #ef5350; }
-  &.trade-stat-sell { color: #26a69a; }
+  &.trade-stat-buy {
+    color: #ef5350;
+  }
+  &.trade-stat-sell {
+    color: #26a69a;
+  }
 }
 
 // 策略列表
@@ -836,7 +888,9 @@ onUnmounted(() => {
   &:last-child {
     padding-bottom: 0;
 
-    &::before { display: none; }
+    &::before {
+      display: none;
+    }
   }
 
   &::before {
@@ -861,11 +915,26 @@ onUnmounted(() => {
   box-shadow: 0 0 0 3px #ebeef5;
   transition: all 0.3s;
 
-  &.activity-dot-success { background: #67c23a; box-shadow: 0 0 0 3px #e1f3d8; }
-  &.activity-dot-info { background: #409eff; box-shadow: 0 0 0 3px #d9ecff; }
-  &.activity-dot-warning { background: #e6a23c; box-shadow: 0 0 0 3px #faecd8; }
-  &.activity-dot-danger { background: #f56c6c; box-shadow: 0 0 0 3px #fde2e2; }
-  &.activity-dot-default { background: #909399; box-shadow: 0 0 0 3px #ebeef5; }
+  &.activity-dot-success {
+    background: #67c23a;
+    box-shadow: 0 0 0 3px #e1f3d8;
+  }
+  &.activity-dot-info {
+    background: #409eff;
+    box-shadow: 0 0 0 3px #d9ecff;
+  }
+  &.activity-dot-warning {
+    background: #e6a23c;
+    box-shadow: 0 0 0 3px #faecd8;
+  }
+  &.activity-dot-danger {
+    background: #f56c6c;
+    box-shadow: 0 0 0 3px #fde2e2;
+  }
+  &.activity-dot-default {
+    background: #909399;
+    box-shadow: 0 0 0 3px #ebeef5;
+  }
 }
 
 .activity-item:hover .activity-dot {
@@ -914,7 +983,7 @@ onUnmounted(() => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%);
     opacity: 0;
     transition: opacity 0.3s;
   }
@@ -925,7 +994,9 @@ onUnmounted(() => {
     transform: translateY(-4px);
     border-color: rgba(64, 158, 255, 0.2);
 
-    &::before { opacity: 1; }
+    &::before {
+      opacity: 1;
+    }
 
     .action-icon {
       transform: scale(1.1) rotate(-5deg);
@@ -1008,7 +1079,8 @@ onUnmounted(() => {
 }
 
 @keyframes pulse-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }

@@ -330,7 +330,7 @@ impl ParameterOptimizer {
         depth: usize,
         current: &mut [f64],
         combinations: &mut Vec<Vec<(String, f64)>>,
-        ranges: &[ParamRange],
+        _ranges: &[ParamRange],
     ) {
         if depth == param_values.len() {
             let combo = param_values.iter().enumerate()
@@ -342,7 +342,7 @@ impl ParameterOptimizer {
 
         for value in &param_values[depth].1 {
             current[depth] = *value;
-            self.generate_combinations_recursive(param_values, depth + 1, current, combinations, ranges);
+            self.generate_combinations_recursive(param_values, depth + 1, current, combinations, _ranges);
         }
     }
 
@@ -434,7 +434,7 @@ impl ParameterOptimizer {
                 fitness_a.partial_cmp(&fitness_b).unwrap()
             })
             .cloned()
-            .unwrap_or_else(|| Self::dummy_result())
+            .unwrap_or_else(Self::dummy_result)
     }
 
     /// Extract parameters from a result (placeholder)

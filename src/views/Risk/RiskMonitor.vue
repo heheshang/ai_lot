@@ -18,7 +18,9 @@
           <span class="indicator-text">{{ isUpdating ? '更新中...' : '实时更新' }}</span>
         </div>
         <el-button :icon="Setting" @click="showSettings = true">风险设置</el-button>
-        <el-button type="primary" :icon="Refresh" :loading="refreshing" @click="refreshData">刷新</el-button>
+        <el-button type="primary" :icon="Refresh" :loading="refreshing" @click="refreshData"
+          >刷新</el-button
+        >
       </div>
     </div>
 
@@ -38,10 +40,16 @@
             </el-icon>
           </div>
           <div class="gauge-body">
-            <div :ref="el => setGaugeRef(card.id, el)" class="gauge-chart" style="height: 200px"></div>
+            <div
+              :ref="(el) => setGaugeRef(card.id, el)"
+              class="gauge-chart"
+              style="height: 200px"
+            ></div>
             <div class="risk-score-value">
               <span class="score" :class="getRiskLevelClass(card.value)">
-                <span :ref="el => setScoreRef(card.id, el)">{{ displayScore(card.id, card.value) }}</span>
+                <span :ref="(el) => setScoreRef(card.id, el)">{{
+                  displayScore(card.id, card.value)
+                }}</span>
               </span>
               <span v-if="card.showLabel" class="label">/ 100</span>
               <span v-else class="label">%</span>
@@ -116,10 +124,27 @@
 
         <div v-if="filteredAlerts.length === 0" class="alerts-empty">
           <div class="empty-state">
-            <svg class="empty-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="32" cy="32" r="28" fill="#E8F5E9"/>
-              <path d="M32 18V32M32 38V40" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
-              <circle cx="32" cy="32" r="24" stroke="#4CAF50" stroke-width="2" stroke-dasharray="4 4"/>
+            <svg
+              class="empty-icon"
+              viewBox="0 0 64 64"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle cx="32" cy="32" r="28" fill="#E8F5E9" />
+              <path
+                d="M32 18V32M32 38V40"
+                stroke="#4CAF50"
+                stroke-width="3"
+                stroke-linecap="round"
+              />
+              <circle
+                cx="32"
+                cy="32"
+                r="24"
+                stroke="#4CAF50"
+                stroke-width="2"
+                stroke-dasharray="4 4"
+              />
             </svg>
             <p class="empty-text">暂无预警信息</p>
             <p class="empty-desc">系统运行正常，所有风险指标在安全范围内</p>
@@ -162,7 +187,10 @@
               </div>
               <div class="metric">
                 <span class="metric-label">现价</span>
-                <span class="metric-value" :class="getPriceClass(position.currentPrice, position.avgPrice)">
+                <span
+                  class="metric-value"
+                  :class="getPriceClass(position.currentPrice, position.avgPrice)"
+                >
                   {{ formatPrice(position.currentPrice) }}
                 </span>
               </div>
@@ -172,7 +200,7 @@
               <span
                 class="pnl-value"
                 :class="position.unrealizedPnl >= 0 ? 'text-success' : 'danger'"
-                :ref="el => setPnlRef(position.symbol, el)"
+                :ref="(el) => setPnlRef(position.symbol, el)"
               >
                 {{ formatCurrency(position.unrealizedPnl) }}
                 ({{ formatPercent(position.unrealizedPnlPercent) }})
@@ -218,14 +246,31 @@
     </div>
 
     <!-- 风险设置对话框 -->
-    <el-dialog v-model="showSettings" title="风险阈值设置" width="600px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="showSettings"
+      title="风险阈值设置"
+      width="600px"
+      :close-on-click-modal="false"
+    >
       <el-form :model="riskSettings" label-width="120px">
         <el-form-item label="最大持仓比例">
-          <el-slider v-model="riskSettings.maxPositionRatio" :min="1" :max="100" :step="1" show-input />
+          <el-slider
+            v-model="riskSettings.maxPositionRatio"
+            :min="1"
+            :max="100"
+            :step="1"
+            show-input
+          />
           <span class="setting-hint">单个币种最大持仓占比</span>
         </el-form-item>
         <el-form-item label="总仓位限制">
-          <el-slider v-model="riskSettings.maxTotalPosition" :min="1" :max="100" :step="1" show-input />
+          <el-slider
+            v-model="riskSettings.maxTotalPosition"
+            :min="1"
+            :max="100"
+            :step="1"
+            show-input
+          />
           <span class="setting-hint">所有持仓总资金占比上限</span>
         </el-form-item>
         <el-form-item label="止损比例">
@@ -233,7 +278,13 @@
           <span class="setting-hint">单个仓位触发止损的比例</span>
         </el-form-item>
         <el-form-item label="止盈比例">
-          <el-slider v-model="riskSettings.takeProfitRatio" :min="1" :max="100" :step="1" show-input />
+          <el-slider
+            v-model="riskSettings.takeProfitRatio"
+            :min="1"
+            :max="100"
+            :step="1"
+            show-input
+          />
           <span class="setting-hint">单个仓位触发止盈的比例</span>
         </el-form-item>
         <el-form-item label="最大回撤限制">
@@ -241,7 +292,13 @@
           <span class="setting-hint">账户最大可接受回撤比例</span>
         </el-form-item>
         <el-form-item label="日亏损限制">
-          <el-slider v-model="riskSettings.dailyLossLimit" :min="1" :max="20" :step="1" show-input />
+          <el-slider
+            v-model="riskSettings.dailyLossLimit"
+            :min="1"
+            :max="20"
+            :step="1"
+            show-input
+          />
           <span class="setting-hint">单日最大可接受亏损比例</span>
         </el-form-item>
       </el-form>
@@ -254,10 +311,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, reactive } from 'vue';
-import { ElMessage } from 'element-plus';
-import * as echarts from 'echarts';
-import type { EChartsOption } from 'echarts';
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
+import { ElMessage } from 'element-plus'
+import * as echarts from 'echarts'
+import type { EChartsOption } from 'echarts'
 import {
   Warning,
   Setting,
@@ -272,66 +329,66 @@ import {
   ShoppingCart,
   Check,
   Close,
-} from '@element-plus/icons-vue';
+} from '@element-plus/icons-vue'
 
 // ============== 类型定义 ==============
 interface GaugeCard {
-  id: string;
-  title: string;
-  icon: any;
-  iconClass: string;
-  value: number;
-  displayValue: number;
-  showLabel: boolean;
-  showLevel: boolean;
-  desc?: string;
+  id: string
+  title: string
+  icon: any
+  iconClass: string
+  value: number
+  displayValue: number
+  showLabel: boolean
+  showLevel: boolean
+  desc?: string
 }
 
 interface Alert {
-  id: number;
-  level: 'critical' | 'warning' | 'info';
-  title: string;
-  message: string;
-  source: string;
-  symbol: string;
-  time: Date;
+  id: number
+  level: 'critical' | 'warning' | 'info'
+  title: string
+  message: string
+  source: string
+  symbol: string
+  time: Date
 }
 
 interface PositionRisk {
-  symbol: string;
-  value: number;
-  amount: number;
-  avgPrice: number;
-  currentPrice: number;
-  unrealizedPnl: number;
-  unrealizedPnlPercent: number;
-  riskPercent: number;
-  displayPnl: number;
+  symbol: string
+  value: number
+  amount: number
+  avgPrice: number
+  currentPrice: number
+  unrealizedPnl: number
+  unrealizedPnlPercent: number
+  riskPercent: number
+  displayPnl: number
 }
 
 // ============== 图表引用管理 ==============
-const gaugeRefs = reactive<Record<string, HTMLElement>>({});
-const scoreRefs = reactive<Record<string, HTMLElement>>({});
-const pnlRefs = reactive<Record<string, HTMLElement>>({});
+const gaugeRefs = reactive<Record<string, HTMLElement>>({})
+const scoreRefs = reactive<Record<string, HTMLElement>>({})
+const pnlRefs = reactive<Record<string, HTMLElement>>({})
 
-function setGaugeRef(id: string, el: HTMLElement | null) {
-  if (el) gaugeRefs[id] = el;
+function setGaugeRef(id: string, el: any) {
+  if (el) gaugeRefs[id] = el
 }
 
-function setScoreRef(id: string, el: HTMLElement | null) {
-  if (el) scoreRefs[id] = el;
+function setScoreRef(id: string, el: any) {
+  if (el) scoreRefs[id] = el
 }
 
-function setPnlRef(symbol: string, el: HTMLElement | null) {
-  if (el) pnlRefs[symbol] = el;
+function setPnlRef(symbol: string, el: any) {
+  if (el) pnlRefs[symbol] = el
 }
 
 // ============== 状态管理 ==============
-const showSettings = ref(false);
-const alertFilter = ref<'all' | 'critical' | 'warning' | 'info'>('all');
-const trendPeriod = ref<'1h' | '4h' | '1d' | '1w'>('1d');
-const refreshing = ref(false);
-const isUpdating = ref(false);
+const showSettings = ref(false)
+const alertFilter = ref<'all' | 'critical' | 'warning' | 'info'>('all')
+const trendPeriod = ref<'1h' | '4h' | '1d' | '1w'>('1d')
+const refreshing = ref(false)
+const isUpdating = ref(false)
 
 // ============== 仪表盘卡片数据 ==============
 const gaugeCards = reactive<GaugeCard[]>([
@@ -378,12 +435,12 @@ const gaugeCards = reactive<GaugeCard[]>([
     showLevel: false,
     desc: '价格波动率',
   },
-]);
+])
 
 // 显示分数（用于动画）
 function displayScore(id: string, value: number): number {
-  const card = gaugeCards.find(c => c.id === id);
-  return card?.displayValue ?? value;
+  const card = gaugeCards.find((c) => c.id === id)
+  return card?.displayValue ?? value
 }
 
 // ============== 预警数据 ==============
@@ -433,7 +490,7 @@ const alerts = ref<Alert[]>([
     symbol: 'BNB/USDT',
     time: new Date(Date.now() - 2 * 60 * 60 * 1000),
   },
-]);
+])
 
 // ============== 仓位风险数据 ==============
 const positionRisks = ref<PositionRisk[]>([
@@ -481,7 +538,7 @@ const positionRisks = ref<PositionRisk[]>([
     riskPercent: 8,
     displayPnl: 0,
   },
-]);
+])
 
 // ============== 风险设置 ==============
 const riskSettings = ref({
@@ -491,178 +548,186 @@ const riskSettings = ref({
   takeProfitRatio: 15,
   maxDrawdown: 10,
   dailyLossLimit: 5,
-});
+})
 
 // ============== 计算属性 ==============
 const filteredAlerts = computed(() => {
-  if (alertFilter.value === 'all') return alerts.value;
-  return alerts.value.filter((a) => a.level === alertFilter.value);
-});
+  if (alertFilter.value === 'all') return alerts.value
+  return alerts.value.filter((a) => a.level === alertFilter.value)
+})
 
 const alertCount = computed(() => {
-  return alerts.value.filter((a) => a.level === 'critical' || a.level === 'warning').length;
-});
+  return alerts.value.filter((a) => a.level === 'critical' || a.level === 'warning').length
+})
 
 // ============== 工具函数 ==============
 function formatTime(date: Date): string {
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-  if (diff < 60) return `${diff}秒前`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
-  return `${Math.floor(diff / 86400)}天前`;
+  if (diff < 60) return `${diff}秒前`
+  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
+  return `${Math.floor(diff / 86400)}天前`
 }
 
 function formatCurrency(value: number): string {
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function formatPrice(value: number): string {
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function formatPercent(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
 }
 
 function getRiskLevelClass(score: number): string {
-  if (score >= 80) return 'risk-low';
-  if (score >= 60) return 'risk-medium';
-  return 'risk-high';
+  if (score >= 80) return 'risk-low'
+  if (score >= 60) return 'risk-medium'
+  return 'risk-high'
 }
 
 function getRiskLevelText(score: number): string {
-  if (score >= 80) return '风险低';
-  if (score >= 60) return '风险中等';
-  return '风险高';
+  if (score >= 80) return '风险低'
+  if (score >= 60) return '风险中等'
+  return '风险高'
 }
 
 function getPriceClass(current: number, avg: number): string {
-  if (current >= avg) return 'text-success';
-  return 'danger';
+  if (current >= avg) return 'text-success'
+  return 'danger'
 }
 
 function getRiskBarClass(percent: number): string {
-  if (percent >= 50) return 'risk-high';
-  if (percent >= 30) return 'risk-medium';
-  return 'risk-low';
+  if (percent >= 50) return 'risk-high'
+  if (percent >= 30) return 'risk-medium'
+  return 'risk-low'
 }
 
 // ============== 交互处理 ==============
 function handleAlert(alert: Alert) {
-  ElMessage.success(`已处理预警: ${alert.title}`);
-  const index = alerts.value.findIndex((a) => a.id === alert.id);
+  ElMessage.success(`已处理预警: ${alert.title}`)
+  const index = alerts.value.findIndex((a) => a.id === alert.id)
   if (index > -1) {
-    alerts.value.splice(index, 1);
+    alerts.value.splice(index, 1)
   }
 }
 
 function dismissAlert(id: number) {
-  const index = alerts.value.findIndex((a) => a.id === id);
+  const index = alerts.value.findIndex((a) => a.id === id)
   if (index > -1) {
-    alerts.value.splice(index, 1);
-    ElMessage.info('已忽略该预警');
+    alerts.value.splice(index, 1)
+    ElMessage.info('已忽略该预警')
   }
 }
 
 async function refreshData() {
-  refreshing.value = true;
-  isUpdating.value = true;
+  refreshing.value = true
+  isUpdating.value = true
 
   // 模拟数据刷新
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await new Promise((resolve) => setTimeout(resolve, 1500))
 
   // 随机更新风险评分
-  gaugeCards.forEach(card => {
-    const change = Math.floor(Math.random() * 10) - 5;
-    card.value = Math.max(0, Math.min(100, card.value + change));
-    animateScore(card.id, card.value);
-  });
+  gaugeCards.forEach((card) => {
+    const change = Math.floor(Math.random() * 10) - 5
+    card.value = Math.max(0, Math.min(100, card.value + change))
+    animateScore(card.id, card.value)
+  })
 
   // 随机更新仓位数据
-  positionRisks.value.forEach(pos => {
-    const change = (Math.random() - 0.5) * 500;
-    pos.unrealizedPnl = Math.round(pos.unrealizedPnl + change);
-    pos.displayPnl = pos.displayPnl || 0;
-    animatePnl(pos.symbol, pos.unrealizedPnl);
-  });
+  positionRisks.value.forEach((pos) => {
+    const change = (Math.random() - 0.5) * 500
+    pos.unrealizedPnl = Math.round(pos.unrealizedPnl + change)
+    pos.displayPnl = pos.displayPnl || 0
+    animatePnl(pos.symbol, pos.unrealizedPnl)
+  })
 
-  updateTrendChart();
+  updateTrendChart()
 
-  refreshing.value = false;
-  isUpdating.value = false;
-  ElMessage.success('数据已刷新');
+  refreshing.value = false
+  isUpdating.value = false
+  ElMessage.success('数据已刷新')
 }
 
 function saveSettings() {
-  showSettings.value = false;
-  ElMessage.success('风险设置已保存');
+  showSettings.value = false
+  ElMessage.success('风险设置已保存')
 }
 
 // ============== 动画函数 ==============
 // 数字滚动动画 (easeOutExpo)
 function easeOutExpo(t: number): number {
-  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
 }
 
 function animateScore(id: string, targetValue: number, duration: number = 1500) {
-  const card = gaugeCards.find(c => c.id === id);
-  if (!card) return;
+  const card = gaugeCards.find((c) => c.id === id)
+  if (!card) return
 
-  const startValue = card.displayValue;
-  const startTime = performance.now();
+  const startValue = card.displayValue
+  const startTime = performance.now()
+  const cardId = id
 
   function update(currentTime: number) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const eased = easeOutExpo(progress);
-    const currentValue = startValue + (targetValue - startValue) * eased;
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    const eased = easeOutExpo(progress)
+    const currentValue = startValue + (targetValue - startValue) * eased
 
-    card.displayValue = Math.round(currentValue);
+    const currentCard = gaugeCards.find((c) => c.id === cardId)
+    if (currentCard) {
+      currentCard.displayValue = Math.round(currentValue)
+    }
 
     if (progress < 1) {
-      requestAnimationFrame(update);
-    } else {
-      card.displayValue = targetValue;
+      requestAnimationFrame(update)
+    } else if (currentCard) {
+      currentCard.displayValue = targetValue
     }
   }
 
-  requestAnimationFrame(update);
+  requestAnimationFrame(update)
 }
 
 function animatePnl(symbol: string, targetValue: number) {
-  const position = positionRisks.find(p => p.symbol === symbol);
-  if (!position) return;
+  const position = positionRisks.value.find((p) => p.symbol === symbol)
+  if (!position) return
 
-  const startValue = position.displayPnl;
-  const duration = 800;
-  const startTime = performance.now();
+  const startValue = position.displayPnl
+  const duration = 800
+  const startTime = performance.now()
+  const symbolId = symbol
 
   function update(currentTime: number) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const eased = easeOutExpo(progress);
-    const currentValue = startValue + (targetValue - startValue) * eased;
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    const eased = easeOutExpo(progress)
+    const currentValue = startValue + (targetValue - startValue) * eased
 
-    position.displayPnl = currentValue;
+    const currentPos = positionRisks.value.find((p) => p.symbol === symbolId)
+    if (currentPos) {
+      currentPos.displayPnl = currentValue
+    }
 
     if (progress < 1) {
-      requestAnimationFrame(update);
-    } else {
-      position.displayPnl = targetValue;
+      requestAnimationFrame(update)
+    } else if (currentPos) {
+      currentPos.displayPnl = targetValue
     }
   }
 
-  requestAnimationFrame(update);
+  requestAnimationFrame(update)
 }
 
 // ============== ECharts 图表 ==============
-const trendChartRef = ref<HTMLElement>();
-let trendChart: echarts.ECharts | null = null;
+const trendChartRef = ref<HTMLElement>()
+let trendChart: echarts.ECharts | null = null
 
 function renderGaugeChart(container: HTMLElement, value: number): echarts.ECharts {
-  const chart = echarts.init(container);
+  const chart = echarts.init(container)
   const option: EChartsOption = {
     series: [
       {
@@ -676,7 +741,10 @@ function renderGaugeChart(container: HTMLElement, value: number): echarts.EChart
         itemStyle: {
           color: {
             type: 'linear',
-            x: 0, y: 0, x2: 1, y2: 0,
+            x: 0,
+            y: 0,
+            x2: 1,
+            y2: 0,
             colorStops: [
               { offset: 0, color: '#ef5350' },
               { offset: 0.5, color: '#e6a23c' },
@@ -712,29 +780,29 @@ function renderGaugeChart(container: HTMLElement, value: number): echarts.EChart
         data: [{ value }],
       },
     ],
-  };
-  chart.setOption(option);
-  return chart;
+  }
+  chart.setOption(option)
+  return chart
 }
 
 function renderTrendChart() {
-  if (!trendChartRef.value) return;
+  if (!trendChartRef.value) return
 
   if (!trendChart) {
-    trendChart = echarts.init(trendChartRef.value);
+    trendChart = echarts.init(trendChartRef.value)
   }
 
-  const data = [];
-  const now = new Date();
-  const points = 24;
+  const data = []
+  const now = new Date()
+  const points = 24
 
   for (let i = points; i >= 0; i--) {
-    const time = new Date(now.getTime() - i * 3600 * 1000);
-    const score = 60 + Math.random() * 30 + Math.sin(i / 4) * 10;
+    const time = new Date(now.getTime() - i * 3600 * 1000)
+    const score = 60 + Math.random() * 30 + Math.sin(i / 4) * 10
     data.push({
       time: time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
       value: Math.round(score),
-    });
+    })
   }
 
   const option: EChartsOption = {
@@ -748,8 +816,8 @@ function renderTrendChart() {
     tooltip: {
       trigger: 'axis',
       formatter: (params: any) => {
-        const data = params[0];
-        return `${data.axisValue}<br/>风险评分: ${data.value}`;
+        const data = params[0]
+        return `${data.axisValue}<br/>风险评分: ${data.value}`
       },
     },
     xAxis: {
@@ -777,7 +845,10 @@ function renderTrendChart() {
           width: 3,
           color: {
             type: 'linear',
-            x: 0, y: 0, x2: 1, y2: 0,
+            x: 0,
+            y: 0,
+            x2: 1,
+            y2: 0,
             colorStops: [
               { offset: 0, color: '#ef5350' },
               { offset: 0.5, color: '#e6a23c' },
@@ -791,7 +862,10 @@ function renderTrendChart() {
         areaStyle: {
           color: {
             type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
             colorStops: [
               { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
               { offset: 1, color: 'rgba(64, 158, 255, 0)' },
@@ -802,65 +876,68 @@ function renderTrendChart() {
         animationEasing: 'cubicOut',
       },
     ],
-  };
+  }
 
-  trendChart.setOption(option, true);
+  trendChart.setOption(option, true)
 }
 
 function updateTrendChart() {
-  renderTrendChart();
+  renderTrendChart()
 }
 
 // ============== 生命周期 ==============
-let updateInterval: number | null = null;
+let updateInterval: number | null = null
 
 onMounted(() => {
   // 渲染仪表盘
   setTimeout(() => {
     Object.entries(gaugeRefs).forEach(([id, container]) => {
-      const card = gaugeCards.find(c => c.id === id);
+      const card = gaugeCards.find((c) => c.id === id)
       if (card && container) {
-        renderGaugeChart(container, card.value);
-        animateScore(id, card.value);
+        renderGaugeChart(container, card.value)
+        animateScore(id, card.value)
       }
-    });
-  }, 100);
+    })
+  }, 100)
 
   // 渲染趋势图
-  renderTrendChart();
+  renderTrendChart()
 
   // 初始化盈亏显示值
-  positionRisks.value.forEach(pos => {
-    pos.displayPnl = 0;
-    setTimeout(() => {
-      animatePnl(pos.symbol, pos.unrealizedPnl);
-    }, 500 + positionRisks.value.indexOf(pos) * 100);
-  });
+  positionRisks.value.forEach((pos) => {
+    pos.displayPnl = 0
+    setTimeout(
+      () => {
+        animatePnl(pos.symbol, pos.unrealizedPnl)
+      },
+      500 + positionRisks.value.indexOf(pos) * 100
+    )
+  })
 
   // 模拟实时更新 (每30秒)
   updateInterval = window.setInterval(() => {
-    isUpdating.value = true;
+    isUpdating.value = true
     setTimeout(() => {
       // 轻微随机更新
-      gaugeCards.forEach(card => {
-        const change = Math.floor(Math.random() * 6) - 3;
-        card.value = Math.max(0, Math.min(100, card.value + change));
-        animateScore(card.id, card.value);
-      });
-      isUpdating.value = false;
-    }, 500);
-  }, 30000);
-});
+      gaugeCards.forEach((card) => {
+        const change = Math.floor(Math.random() * 6) - 3
+        card.value = Math.max(0, Math.min(100, card.value + change))
+        animateScore(card.id, card.value)
+      })
+      isUpdating.value = false
+    }, 500)
+  }, 30000)
+})
 
 onUnmounted(() => {
   if (trendChart) {
-    trendChart.dispose();
-    trendChart = null;
+    trendChart.dispose()
+    trendChart = null
   }
   if (updateInterval !== null) {
-    clearInterval(updateInterval);
+    clearInterval(updateInterval)
   }
-});
+})
 </script>
 
 <style scoped lang="scss">
@@ -934,13 +1011,27 @@ onUnmounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.1); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
 }
 
 @keyframes pulse-fast {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.2); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
 }
 
 // ============== 仪表盘区域 ==============
@@ -994,10 +1085,22 @@ onUnmounted(() => {
       padding: 8px;
       border-radius: 8px;
 
-      &.icon-primary { color: #409eff; background: #ecf5ff; }
-      &.icon-success { color: #26a69a; background: #e6f7f7; }
-      &.icon-warning { color: #e6a23c; background: #fef8f0; }
-      &.icon-danger { color: #ef5350; background: #fef2f2; }
+      &.icon-primary {
+        color: #409eff;
+        background: #ecf5ff;
+      }
+      &.icon-success {
+        color: #26a69a;
+        background: #e6f7f7;
+      }
+      &.icon-warning {
+        color: #e6a23c;
+        background: #fef8f0;
+      }
+      &.icon-danger {
+        color: #ef5350;
+        background: #fef2f2;
+      }
     }
   }
 
@@ -1016,9 +1119,15 @@ onUnmounted(() => {
         font-weight: 700;
         display: inline-block;
 
-        &.risk-low { color: #26a69a; }
-        &.risk-medium { color: #e6a23c; }
-        &.risk-high { color: #ef5350; }
+        &.risk-low {
+          color: #26a69a;
+        }
+        &.risk-medium {
+          color: #e6a23c;
+        }
+        &.risk-high {
+          color: #ef5350;
+        }
       }
 
       .label {
@@ -1036,9 +1145,15 @@ onUnmounted(() => {
       font-size: 14px;
       font-weight: 600;
 
-      &.risk-low { color: #26a69a; }
-      &.risk-medium { color: #e6a23c; }
-      &.risk-high { color: #ef5350; }
+      &.risk-low {
+        color: #26a69a;
+      }
+      &.risk-medium {
+        color: #e6a23c;
+      }
+      &.risk-high {
+        color: #ef5350;
+      }
     }
 
     .risk-desc {
@@ -1161,21 +1276,27 @@ onUnmounted(() => {
     border-left-color: #ef5350;
     background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
 
-    .alert-icon { color: #ef5350; }
+    .alert-icon {
+      color: #ef5350;
+    }
   }
 
   &.alert-warning {
     border-left-color: #e6a23c;
     background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
 
-    .alert-icon { color: #e6a23c; }
+    .alert-icon {
+      color: #e6a23c;
+    }
   }
 
   &.alert-info {
     border-left-color: #409eff;
     background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
 
-    .alert-icon { color: #409eff; }
+    .alert-icon {
+      color: #409eff;
+    }
   }
 
   // 严重预警脉冲动画
@@ -1183,8 +1304,13 @@ onUnmounted(() => {
     animation: alert-pulse 2s ease-in-out infinite;
 
     @keyframes alert-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 83, 80, 0); }
-      50% { box-shadow: 0 0 0 8px rgba(239, 83, 80, 0.1); }
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(239, 83, 80, 0);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(239, 83, 80, 0.1);
+      }
     }
   }
 
@@ -1300,8 +1426,13 @@ onUnmounted(() => {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 // ============== 仓位风险分析 ==============
@@ -1482,9 +1613,15 @@ onUnmounted(() => {
             animation: shimmer 2s infinite;
           }
 
-          &.risk-low { background: linear-gradient(90deg, #26a69a, #4db6ac); }
-          &.risk-medium { background: linear-gradient(90deg, #e6a23c, #f5ba7c); }
-          &.risk-high { background: linear-gradient(90deg, #ef5350, #f07170); }
+          &.risk-low {
+            background: linear-gradient(90deg, #26a69a, #4db6ac);
+          }
+          &.risk-medium {
+            background: linear-gradient(90deg, #e6a23c, #f5ba7c);
+          }
+          &.risk-high {
+            background: linear-gradient(90deg, #ef5350, #f07170);
+          }
         }
       }
 
@@ -1500,8 +1637,12 @@ onUnmounted(() => {
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 // ============== 风险趋势 ==============

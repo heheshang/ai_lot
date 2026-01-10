@@ -264,40 +264,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue';
-import { ElMessage, type FormInstance, type FormRules, type UploadRequestOptions } from 'element-plus';
+import { ref, computed, reactive, onMounted } from 'vue'
 import {
-  UserFilled,
-  User,
-  Setting,
-  Lock,
-  Edit,
-  Plus,
-} from '@element-plus/icons-vue';
-import { useUserStore } from '@/store';
-import { UserStatus } from '@/types';
-import type { UserProfile, UserPreferences } from '@/types';
+  ElMessage,
+  type FormInstance,
+  type FormRules,
+  type UploadRequestOptions,
+} from 'element-plus'
+import { UserFilled, User, Setting, Lock, Edit, Plus } from '@element-plus/icons-vue'
+import { useUserStore } from '@/store'
+import { UserStatus } from '@/types'
+import type { UserProfile, UserPreferences } from '@/types'
 
-const userStore = useUserStore();
+const userStore = useUserStore()
 
 // 表单引用
-const profileFormRef = ref<FormInstance>();
-const passwordFormRef = ref<FormInstance>();
+const profileFormRef = ref<FormInstance>()
+const passwordFormRef = ref<FormInstance>()
 
 // 状态
-const saving = ref(false);
-const changingPassword = ref(false);
-const showAvatarDialog = ref(false);
-const showPasswordDialog = ref(false);
-const avatarUrl = ref('');
-const avatarPreview = ref('');
-const tempAvatarFile = ref<File | null>(null);
+const saving = ref(false)
+const changingPassword = ref(false)
+const showAvatarDialog = ref(false)
+const showPasswordDialog = ref(false)
+const avatarUrl = ref('')
+const avatarPreview = ref('')
+const tempAvatarFile = ref<File | null>(null)
 
 // 个人信息表单
 const profileForm = reactive<UserProfile>({
   displayName: userStore.user?.displayName || '',
   bio: '',
-});
+})
 
 // 偏好设置
 const preferences = reactive<UserPreferences>({
@@ -306,182 +304,176 @@ const preferences = reactive<UserPreferences>({
   emailNotification: true,
   tradeNotification: true,
   riskAlert: true,
-});
+})
 
 // 密码表单
 const passwordForm = reactive({
   oldPassword: '',
   newPassword: '',
   confirmPassword: '',
-});
+})
 
 // 计算属性
-const displayName = computed(() => profileForm.displayName || userStore.user?.displayName);
+const displayName = computed(() => profileForm.displayName || userStore.user?.displayName)
 
 const statusText = computed(() => {
-  const status = userStore.user?.status;
-  if (status === UserStatus.ACTIVE) return '正常';
-  if (status === UserStatus.DISABLED) return '已禁用';
-  if (status === UserStatus.LOCKED) return '已锁定';
-  return '未知';
-});
+  const status = userStore.user?.status
+  if (status === UserStatus.ACTIVE) return '正常'
+  if (status === UserStatus.DISABLED) return '已禁用'
+  if (status === UserStatus.LOCKED) return '已锁定'
+  return '未知'
+})
 
 // 表单验证规则
 const profileRules: FormRules = {
-  displayName: [
-    { min: 2, max: 50, message: '显示名称长度在 2 到 50 个字符', trigger: 'blur' },
-  ],
-};
+  displayName: [{ min: 2, max: 50, message: '显示名称长度在 2 到 50 个字符', trigger: 'blur' }],
+}
 
-const validateConfirmPassword = (rule: any, value: any, callback: any) => {
+const validateConfirmPassword = (_rule: any, value: any, callback: any) => {
   if (value === '') {
-    callback(new Error('请再次输入密码'));
+    callback(new Error('请再次输入密码'))
   } else if (value !== passwordForm.newPassword) {
-    callback(new Error('两次输入密码不一致'));
+    callback(new Error('两次输入密码不一致'))
   } else {
-    callback();
+    callback()
   }
-};
+}
 
 const passwordRules: FormRules = {
-  oldPassword: [
-    { required: true, message: '请输入当前密码', trigger: 'blur' },
-  ],
+  oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
     { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' },
   ],
-  confirmPassword: [
-    { required: true, validator: validateConfirmPassword, trigger: 'blur' },
-  ],
-};
+  confirmPassword: [{ required: true, validator: validateConfirmPassword, trigger: 'blur' }],
+}
 
 // 方法
 function getRoleTagType(roleName: string): 'success' | 'warning' | 'info' | 'danger' | '' {
   const roleMap: Record<string, 'success' | 'warning' | 'info' | 'danger' | ''> = {
-    '管理员': 'danger',
-    '开发者': 'warning',
-    '交易员': 'success',
-    '审计员': 'info',
-  };
-  return roleMap[roleName] || '';
+    管理员: 'danger',
+    开发者: 'warning',
+    交易员: 'success',
+    审计员: 'info',
+  }
+  return roleMap[roleName] || ''
 }
 
 function formatDate(timestamp?: number): string {
-  if (!timestamp) return '-';
-  const date = new Date(timestamp);
+  if (!timestamp) return '-'
+  const date = new Date(timestamp)
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-  });
+  })
 }
 
 async function saveProfile() {
-  if (!profileFormRef.value) return;
+  if (!profileFormRef.value) return
 
   try {
-    await profileFormRef.value.validate();
-    saving.value = true;
+    await profileFormRef.value.validate()
+    saving.value = true
 
     // TODO: 调用 API 保存用户资料
     // await api.userApi.updateProfile(profileForm);
 
     // 模拟保存
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-    ElMessage.success('保存成功');
+    ElMessage.success('保存成功')
   } catch (error) {
-    console.error('Save profile failed:', error);
+    console.error('Save profile failed:', error)
   } finally {
-    saving.value = false;
+    saving.value = false
   }
 }
 
 function resetForm() {
-  profileForm.displayName = userStore.user?.displayName || '';
-  profileForm.bio = '';
-  profileFormRef.value?.clearValidate();
+  profileForm.displayName = userStore.user?.displayName || ''
+  profileForm.bio = ''
+  profileFormRef.value?.clearValidate()
 }
 
 function beforeAvatarUpload(file: File): boolean {
-  const isImage = file.type.startsWith('image/');
-  const isLt2M = file.size / 1024 / 1024 < 2;
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
 
   if (!isImage) {
-    ElMessage.error('只能上传图片文件！');
-    return false;
+    ElMessage.error('只能上传图片文件！')
+    return false
   }
   if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB！');
-    return false;
+    ElMessage.error('图片大小不能超过 2MB！')
+    return false
   }
 
-  return true;
+  return true
 }
 
 function handleAvatarUpload(options: UploadRequestOptions): void {
-  const file = options.file;
-  tempAvatarFile.value = file;
+  const file = options.file
+  tempAvatarFile.value = file
 
   // 创建预览
-  const reader = new FileReader();
+  const reader = new FileReader()
   reader.onload = (e) => {
-    avatarPreview.value = e.target?.result as string;
-  };
-  reader.readAsDataURL(file);
+    avatarPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
 }
 
 function confirmAvatar() {
-  if (!tempAvatarFile.value) return;
+  if (!tempAvatarFile.value) return
 
   // TODO: 调用 API 上传头像
   // const formData = new FormData();
   // formData.append('avatar', tempAvatarFile.value);
   // await api.userApi.uploadAvatar(formData);
 
-  avatarUrl.value = avatarPreview.value;
-  showAvatarDialog.value = false;
-  tempAvatarFile.value = null;
-  ElMessage.success('头像更新成功');
+  avatarUrl.value = avatarPreview.value
+  showAvatarDialog.value = false
+  tempAvatarFile.value = null
+  ElMessage.success('头像更新成功')
 }
 
 async function changePassword() {
-  if (!passwordFormRef.value) return;
+  if (!passwordFormRef.value) return
 
   try {
-    await passwordFormRef.value.validate();
-    changingPassword.value = true;
+    await passwordFormRef.value.validate()
+    changingPassword.value = true
 
     // TODO: 调用 API 修改密码
     // await api.userApi.changePassword(passwordForm);
 
     // 模拟修改
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-    ElMessage.success('密码修改成功，请重新登录');
-    showPasswordDialog.value = false;
+    ElMessage.success('密码修改成功，请重新登录')
+    showPasswordDialog.value = false
 
     // 重置表单
-    passwordForm.oldPassword = '';
-    passwordForm.newPassword = '';
-    passwordForm.confirmPassword = '';
-    passwordFormRef.value.clearValidate();
+    passwordForm.oldPassword = ''
+    passwordForm.newPassword = ''
+    passwordForm.confirmPassword = ''
+    passwordFormRef.value.clearValidate()
   } catch (error) {
-    console.error('Change password failed:', error);
+    console.error('Change password failed:', error)
   } finally {
-    changingPassword.value = false;
+    changingPassword.value = false
   }
 }
 
 onMounted(() => {
   // 初始化表单数据
   if (userStore.user) {
-    profileForm.displayName = userStore.user.displayName || '';
+    profileForm.displayName = userStore.user.displayName || ''
   }
-});
+})
 </script>
 
 <style scoped lang="scss">

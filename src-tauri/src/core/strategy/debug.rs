@@ -133,7 +133,7 @@ impl PerformanceMetrics {
         *self.call_counts.entry(function.clone()).or_insert(0) += 1;
         self.execution_times
             .entry(function)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(duration_ms);
         self.total_execution_time_ms += duration_ms;
     }

@@ -217,7 +217,7 @@ pub fn validate_limit(limit: usize) -> Result<usize, ApiError> {
 /// 验证ID格式（UUID或特定格式）
 pub fn validate_id(id: &str, field_name: impl Into<String>) -> Result<(), ApiError> {
     let field_name = field_name.into();
-    if id.len() < 1 {
+    if id.is_empty() {
         return Err(ApiError::validation_failed(&field_name, "不能为空"));
     }
     if id.len() > 100 {

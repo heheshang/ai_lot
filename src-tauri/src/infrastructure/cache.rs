@@ -288,7 +288,6 @@ lazy_static::lazy_static! {
 }
 
 /// Convenience functions for accessing global caches
-
 pub use global_caches::{TickerCacheKey, KlineCacheKey, AccountCacheKey};
 
 /// Get ticker from cache

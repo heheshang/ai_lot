@@ -314,7 +314,7 @@ impl BinanceExchange {
     /// 从 Binance API 响应解析订单
     fn parse_order(&self, json: &Value, request: &OrderRequest) -> Result<Order> {
         Ok(Order {
-            id: json["orderId"].as_str().unwrap_or(&json["clientOrderId"].as_str().unwrap_or("")).to_string(),
+            id: json["orderId"].as_str().unwrap_or_else(|| json["clientOrderId"].as_str().unwrap_or("")).to_string(),
             exchange_order_id: Some(json["orderId"].as_str().unwrap_or("").to_string()),
             client_order_id: json["clientOrderId"].as_str().map(|s| s.to_string()),
             symbol: json["symbol"].as_str().unwrap_or(&request.symbol).to_string(),

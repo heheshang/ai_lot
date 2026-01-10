@@ -124,7 +124,7 @@ impl RiskMonitor {
             match rule.check(&context).await {
                 Ok(triggered) => {
                     if triggered {
-                        if let Err(e) = self.handle_rule_trigger(rule, &context).await {
+                        if let Err(e) = self.handle_rule_trigger(&**rule, &context).await {
                             log::error!("Failed to handle rule trigger for {}: {}", rule.name(), e);
                         }
                     }
@@ -141,7 +141,7 @@ impl RiskMonitor {
     /// Handle a triggered risk rule
     async fn handle_rule_trigger(
         &self,
-        rule: &Box<dyn RiskRule>,
+        rule: &dyn RiskRule,
         context: &RiskContext,
     ) -> Result<()> {
         let config = rule.config();
@@ -189,7 +189,7 @@ impl RiskMonitor {
     /// Record alert to database
     async fn record_alert(
         &self,
-        rule: &Box<dyn RiskRule>,
+        rule: &dyn RiskRule,
         _context: &RiskContext,
     ) -> Result<()> {
         let alert_id = Uuid::new_v4().to_string();
@@ -226,7 +226,7 @@ impl RiskMonitor {
     async fn send_notification(
         &self,
         method: &str,
-        rule: &Box<dyn RiskRule>,
+        rule: &dyn RiskRule,
         context: &RiskContext,
     ) -> Result<()> {
         let message = format!(

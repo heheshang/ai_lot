@@ -2,6 +2,7 @@
 //!
 //! This module provides Tauri command handlers for risk management operations.
 
+use crate::core::response::{ApiResponse, ApiError};
 use crate::infrastructure::Database;
 use crate::repository::risk_alert_repo::RiskAlertRepository;
 use anyhow::Result;
@@ -41,7 +42,8 @@ pub struct RiskAlertListItem {
 pub async fn get_risk_overview(
     db: State<'_, Database>,
     user_id: Option<String>,
-) -> Result<RiskOverview, String> {
+) -> Result<ApiResponse<RiskOverview>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let pool = db.pool.clone();
     let uid = user_id.unwrap_or_else(|| "default_user".to_string());
 
@@ -58,11 +60,17 @@ pub async fn get_risk_overview(
         WHERE user_id = ? AND quantity > 0
     "#;
 
-    let position_rows = sqlx::query(positions_query)
+    let position_rows = match sqlx::query(positions_query)
         .bind(&uid)
         .fetch_all(&pool)
         .await
-        .map_err(|e| format!("Failed to query positions: {}", e))?;
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            log::error!("[{}] Failed to query positions: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::database_error(format!("查询持仓失败: {}", e))).with_request_id(request_id));
+        }
+    };
 
     let total_position_value: f64 = position_rows
         .iter()
@@ -180,7 +188,7 @@ pub async fn get_risk_overview(
         else { "ok".to_string() },
     );
 
-    Ok(RiskOverview {
+    Ok(ApiResponse::success(RiskOverview {
         balance,
         today_pnl,
         total_position_value,
@@ -188,7 +196,7 @@ pub async fn get_risk_overview(
         peak_equity,
         active_alert_count,
         rule_status,
-    })
+    }).with_request_id(request_id))
 }
 
 /// Get active alerts for dashboard
@@ -196,15 +204,19 @@ pub async fn get_risk_overview(
 pub async fn get_active_alerts(
     db: State<'_, Database>,
     user_id: Option<String>,
-) -> Result<Vec<RiskAlertListItem>, String> {
+) -> Result<ApiResponse<Vec<RiskAlertListItem>>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let pool = db.pool.clone();
     let alert_repo = RiskAlertRepository::new(pool);
     let uid = user_id.unwrap_or_else(|| "default_user".to_string());
 
-    let alerts = alert_repo
-        .find_unresolved_by_user(&uid)
-        .await
-        .map_err(|e| format!("Failed to get alerts: {}", e))?;
+    let alerts = match alert_repo.find_unresolved_by_user(&uid).await {
+        Ok(alerts) => alerts,
+        Err(e) => {
+            log::error!("[{}] Failed to get alerts: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("查询告警失败")).with_request_id(request_id));
+        }
+    };
 
     let result: Vec<RiskAlertListItem> = alerts
         .into_iter()
@@ -218,7 +230,7 @@ pub async fn get_active_alerts(
         })
         .collect();
 
-    Ok(result)
+    Ok(ApiResponse::success(result).with_request_id(request_id))
 }
 
 /// Handle an alert (mark as handled)
@@ -227,33 +239,41 @@ pub async fn handle_alert(
     alert_id: String,
     db: State<'_, Database>,
     user_id: Option<String>,
-) -> Result<(), String> {
+) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let pool = db.pool.clone();
     let alert_repo = RiskAlertRepository::new(pool);
     let uid = user_id.unwrap_or_else(|| "default_user".to_string());
 
-    alert_repo
-        .mark_handled(&alert_id, &uid)
-        .await
-        .map_err(|e| format!("Failed to handle alert: {}", e))?;
-
-    log::info!("Alert {} marked as handled by {}", alert_id, uid);
-    Ok(())
+    match alert_repo.mark_handled(&alert_id, &uid).await {
+        Ok(()) => {
+            log::info!("[{}] Alert {} marked as handled by {}", request_id, alert_id, uid);
+            Ok(ApiResponse::success_empty().with_request_id(request_id))
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to handle alert: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed("处理告警失败")).with_request_id(request_id))
+        }
+    }
 }
 
 /// Ignore an alert
 #[tauri::command]
-pub async fn ignore_alert(alert_id: String, db: State<'_, Database>) -> Result<(), String> {
+pub async fn ignore_alert(alert_id: String, db: State<'_, Database>) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let pool = db.pool.clone();
     let alert_repo = RiskAlertRepository::new(pool);
 
-    alert_repo
-        .mark_ignored(&alert_id)
-        .await
-        .map_err(|e| format!("Failed to ignore alert: {}", e))?;
-
-    log::info!("Alert {} marked as ignored", alert_id);
-    Ok(())
+    match alert_repo.mark_ignored(&alert_id).await {
+        Ok(()) => {
+            log::info!("[{}] Alert {} marked as ignored", request_id, alert_id);
+            Ok(ApiResponse::success_empty().with_request_id(request_id))
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to ignore alert: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed("忽略告警失败")).with_request_id(request_id))
+        }
+    }
 }
 
 // ============== Risk Rule Configuration Commands ==============
@@ -285,11 +305,16 @@ pub struct RiskRuleListItem {
 #[tauri::command]
 pub async fn get_risk_rules(
     db: State<'_, Database>,
-) -> Result<Vec<RiskRuleListItem>, String> {
+) -> Result<ApiResponse<Vec<RiskRuleListItem>>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let repo = db.risk_rule_repo();
-    let rules = repo.find_all()
-        .await
-        .map_err(|e| format!("Failed to fetch risk rules: {}", e))?;
+    let rules = match repo.find_all().await {
+        Ok(rules) => rules,
+        Err(e) => {
+            log::error!("[{}] Failed to fetch risk rules: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::operation_failed("查询风控规则失败")).with_request_id(request_id));
+        }
+    };
 
     let frontend_rules: Vec<RiskRuleListItem> = rules
         .into_iter()
@@ -317,7 +342,7 @@ pub async fn get_risk_rules(
         })
         .collect();
 
-    Ok(frontend_rules)
+    Ok(ApiResponse::success(frontend_rules).with_request_id(request_id))
 }
 
 /// Update a single risk rule configuration in database
@@ -330,34 +355,39 @@ pub async fn update_risk_rule(
     db: State<'_, Database>,
     rule_name: String,
     config: FrontendRiskRuleConfig,
-) -> Result<(), String> {
+) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+
     // Validate action
     if !["warning", "stop_strategy", "emergency_close"].contains(&config.action.as_str()) {
-        return Err(format!("Invalid action: {}", config.action));
+        return Ok(ApiResponse::error(ApiError::invalid_parameter("action")).with_request_id(request_id));
     }
 
     // Validate parameters based on rule type
-    validate_rule_params(&rule_name, &config.params)?;
+    if let Err(e) = validate_rule_params(&rule_name, &config.params) {
+        return Ok(ApiResponse::error(ApiError::validation_failed(&rule_name, e)).with_request_id(request_id));
+    }
 
     let repo = db.risk_rule_repo();
-    repo.update(
+    match repo.update(
         &rule_name,
         config.enabled,
         &config.action,
         &config.notify_methods,
         &config.params,
-    )
-    .await
-    .map_err(|e| format!("Failed to update risk rule: {}", e))?;
-
-    log::info!(
-        "Updated risk rule: {} (enabled: {}, action: {})",
-        rule_name,
-        config.enabled,
-        config.action
-    );
-
-    Ok(())
+    ).await {
+        Ok(()) => {
+            log::info!(
+                "[{}] Updated risk rule: {} (enabled: {}, action: {})",
+                request_id, rule_name, config.enabled, config.action
+            );
+            Ok(ApiResponse::success_empty().with_request_id(request_id))
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to update risk rule: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed("更新风控规则失败")).with_request_id(request_id))
+        }
+    }
 }
 
 /// Validate rule parameters based on rule type
@@ -449,7 +479,8 @@ pub struct RiskAlertHistoryListItem {
 pub async fn get_alert_history(
     filter: AlertHistoryFilter,
     db: State<'_, Database>,
-) -> Result<AlertListResponse, String> {
+) -> Result<ApiResponse<AlertListResponse>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let page = filter.page.unwrap_or(1).max(1);
     let page_size = filter.page_size.unwrap_or(20).clamp(1, 100);
     let offset = (page - 1) * page_size;
@@ -511,17 +542,15 @@ pub async fn get_alert_history(
         where_clause
     );
 
-    let total: i64 = if params.is_empty() {
-        sqlx::query_scalar(&count_query)
-            .fetch_one(&db.pool)
-            .await
-            .map_err(|e| format!("Failed to count alerts: {}", e))?
-    } else {
-        // Build dynamic query with params - simplified version
-        sqlx::query_scalar(&count_query)
-            .fetch_one(&db.pool)
-            .await
-            .map_err(|e| format!("Failed to count alerts: {}", e))?
+    let total: i64 = match sqlx::query_scalar(&count_query)
+        .fetch_one(&db.pool)
+        .await
+    {
+        Ok(count) => count,
+        Err(e) => {
+            log::error!("[{}] Failed to count alerts: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::database_error(format!("统计告警数量失败: {}", e))).with_request_id(request_id));
+        }
     };
 
     // Get paginated alerts
@@ -546,23 +575,21 @@ pub async fn get_alert_history(
     );
 
     // Simplified - fetch without complex param binding for now
-    let items: Vec<RiskAlertHistoryListItem> = if params.is_empty() {
-        sqlx::query_as(&query)
-            .fetch_all(&db.pool)
-            .await
-            .map_err(|e| format!("Failed to fetch alerts: {}", e))?
-    } else {
-        // TODO: Implement proper param binding
-        sqlx::query_as(&query)
-            .fetch_all(&db.pool)
-            .await
-            .map_err(|e| format!("Failed to fetch alerts: {}", e))?
+    let items: Vec<RiskAlertHistoryListItem> = match sqlx::query_as(&query)
+        .fetch_all(&db.pool)
+        .await
+    {
+        Ok(items) => items,
+        Err(e) => {
+            log::error!("[{}] Failed to fetch alerts: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::database_error(format!("查询告警失败: {}", e))).with_request_id(request_id));
+        }
     };
 
-    Ok(AlertListResponse {
+    Ok(ApiResponse::success(AlertListResponse {
         items,
         total: total as i32,
-    })
+    }).with_request_id(request_id))
 }
 
 /// Risk alert detail (full information)
@@ -596,8 +623,10 @@ pub struct RiskAlertDetail {
 pub async fn get_alert_detail(
     id: String,
     db: State<'_, Database>,
-) -> Result<RiskAlertDetail, String> {
-    let alert = sqlx::query_as::<_, RiskAlertDetail>(
+) -> Result<ApiResponse<RiskAlertDetail>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+
+    let alert = match sqlx::query_as::<_, RiskAlertDetail>(
         "SELECT
             id,
             rule_id,
@@ -619,10 +648,18 @@ pub async fn get_alert_detail(
     .bind(&id)
     .fetch_optional(&db.pool)
     .await
-    .map_err(|e| format!("Failed to fetch alert detail: {}", e))?
-    .ok_or_else(|| format!("Alert not found: {}", id))?;
+    {
+        Ok(Some(alert)) => alert,
+        Ok(None) => {
+            return Ok(ApiResponse::error(ApiError::not_found("告警")).with_request_id(request_id));
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to fetch alert detail: {}", request_id, e);
+            return Ok(ApiResponse::error(ApiError::database_error(format!("查询告警详情失败: {}", e))).with_request_id(request_id));
+        }
+    };
 
-    Ok(alert)
+    Ok(ApiResponse::success(alert).with_request_id(request_id))
 }
 
 /// Add handling note to an alert and mark it as handled
@@ -638,15 +675,17 @@ pub async fn add_alert_note(
     id: String,
     note: String,
     db: State<'_, Database>,
-) -> Result<(), String> {
+) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+
     if note.trim().is_empty() {
-        return Err("Note cannot be empty".to_string());
+        return Ok(ApiResponse::error(ApiError::validation_failed("note", "不能为空")).with_request_id(request_id));
     }
 
     // Update alert: mark as handled and store note
     let now = Utc::now().timestamp();
 
-    sqlx::query(
+    match sqlx::query(
         "UPDATE risk_alerts
         SET status = 'handled',
             handled_by = ?,
@@ -658,10 +697,19 @@ pub async fn add_alert_note(
     .bind(&id)
     .execute(&db.pool)
     .await
-    .map_err(|e| format!("Failed to add alert note: {}", e))?;
-
-    log::info!("Alert {} marked as handled with note", id);
-    Ok(())
+    {
+        Ok(result) if result.rows_affected() > 0 => {
+            log::info!("[{}] Alert {} marked as handled with note", request_id, id);
+            Ok(ApiResponse::success_empty().with_request_id(request_id))
+        }
+        Ok(_) => {
+            Ok(ApiResponse::error(ApiError::not_found("告警")).with_request_id(request_id))
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to add alert note: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed("添加处理备注失败")).with_request_id(request_id))
+        }
+    }
 }
 
 /// Delete an alert
@@ -675,19 +723,26 @@ pub async fn add_alert_note(
 pub async fn delete_alert(
     id: String,
     db: State<'_, Database>,
-) -> Result<(), String> {
-    let result = sqlx::query("DELETE FROM risk_alerts WHERE id = ?")
+) -> Result<ApiResponse<()>, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
+
+    match sqlx::query("DELETE FROM risk_alerts WHERE id = ?")
         .bind(&id)
         .execute(&db.pool)
         .await
-        .map_err(|e| format!("Failed to delete alert: {}", e))?;
-
-    if result.rows_affected() == 0 {
-        return Err(format!("Alert not found: {}", id));
+    {
+        Ok(result) if result.rows_affected() > 0 => {
+            log::info!("[{}] Alert {} deleted", request_id, id);
+            Ok(ApiResponse::success_empty().with_request_id(request_id))
+        }
+        Ok(_) => {
+            Ok(ApiResponse::error(ApiError::not_found("告警")).with_request_id(request_id))
+        }
+        Err(e) => {
+            log::error!("[{}] Failed to delete alert: {}", request_id, e);
+            Ok(ApiResponse::error(ApiError::operation_failed("删除告警失败")).with_request_id(request_id))
+        }
     }
-
-    log::info!("Alert {} deleted", id);
-    Ok(())
 }
 
 #[cfg(test)]

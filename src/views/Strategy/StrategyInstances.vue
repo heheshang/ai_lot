@@ -89,7 +89,7 @@
       </template>
 
       <!-- 调试信息 -->
-      <div style="background: #f0f0f0; padding: 10px; margin-bottom: 10px; font-size: 12px;">
+      <div style="background: #f0f0f0; padding: 10px; margin-bottom: 10px; font-size: 12px">
         <strong>DEBUG:</strong> loading={{ loading }}, instances.length={{ instances.length }}
       </div>
 
@@ -115,7 +115,10 @@
           <div class="instance-header">
             <div class="instance-name">{{ instance.name }}</div>
             <div class="instance-status">
-              <span class="status-indicator" :class="`status-${instance.status.toLowerCase()}`"></span>
+              <span
+                class="status-indicator"
+                :class="`status-${instance.status.toLowerCase()}`"
+              ></span>
               <span class="status-text">{{ getStatusText(instance.status) }}</span>
             </div>
           </div>
@@ -172,7 +175,10 @@
               </div>
               <div class="mini-stat">
                 <span class="mini-stat-label">盈亏</span>
-                <span class="mini-stat-value" :class="(instance.stats?.pnl || 0) >= 0 ? 'profit' : 'loss'">
+                <span
+                  class="mini-stat-value"
+                  :class="(instance.stats?.pnl || 0) >= 0 ? 'profit' : 'loss'"
+                >
                   {{ (instance.stats?.pnl || 0) >= 0 ? '+' : '' }}{{ instance.stats?.pnl || 0 }}
                 </span>
               </div>
@@ -204,7 +210,11 @@
                 恢复
               </el-button>
               <el-button
-                v-if="instance.status === 'Running' || instance.status === 'Paused' || instance.status === 'Error'"
+                v-if="
+                  instance.status === 'Running' ||
+                  instance.status === 'Paused' ||
+                  instance.status === 'Error'
+                "
                 size="small"
                 type="danger"
                 @click="stopInstance(instance.id)"
@@ -322,9 +332,9 @@
             :loading="strategies.length === 0"
           >
             <template v-if="strategies.length === 0" #empty>
-              <div style="padding: 12px; text-align: center; color: #909399;">
+              <div style="padding: 12px; text-align: center; color: #909399">
                 <p>暂无可用策略</p>
-                <p style="font-size: 12px; margin-top: 8px;">请先在「策略管理」页面创建策略</p>
+                <p style="font-size: 12px; margin-top: 8px">请先在「策略管理」页面创建策略</p>
               </div>
             </template>
             <el-option
@@ -333,7 +343,7 @@
               :label="`${strategy.name} - ${getCategoryText(strategy.category || 'trend')}`"
               :value="strategy.id"
             >
-              <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; justify-content: space-between; align-items: center">
                 <span>{{ strategy.name }}</span>
                 <el-tag size="small" :type="getStrategyStatusType(strategy.status)">
                   {{ getStrategyStatusText(strategy.status) }}
@@ -347,7 +357,10 @@
               <el-tag size="small">{{ selectedStrategy.language }}</el-tag>
             </div>
             <div class="preview-code">
-              <pre>{{ selectedStrategy.code.slice(0, 200) }}{{ selectedStrategy.code.length > 200 ? '...' : '' }}</pre>
+              <pre
+                >{{ selectedStrategy.code.slice(0, 200)
+                }}{{ selectedStrategy.code.length > 200 ? '...' : '' }}</pre
+              >
             </div>
             <div v-if="selectedStrategy.description" class="preview-description">
               {{ selectedStrategy.description }}
@@ -399,17 +412,15 @@
 
       <template #footer>
         <el-button @click="showStartDialog = false">取消</el-button>
-        <el-button type="primary" @click="startInstance" :loading="starting">
-          启动
-        </el-button>
+        <el-button type="primary" @click="startInstance" :loading="starting"> 启动 </el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
   Plus,
   VideoPlay,
@@ -420,148 +431,151 @@ import {
   Loading,
   View,
   Tickets,
-} from '@element-plus/icons-vue';
-import { strategyEngineApi, strategyApi } from '@/api/tauri';
-import type { InstanceInfo, StrategyConfig, Strategy } from '@/types';
-import { useUserStore } from '@/store/modules/user';
+} from '@element-plus/icons-vue'
+import { strategyEngineApi, strategyApi } from '@/api/tauri'
+import type { InstanceInfo, StrategyConfig, Strategy } from '@/types'
+import { useUserStore } from '@/store/modules/user'
 
 // Debug: Check if API is imported correctly
-console.log('[StrategyInstances] strategyEngineApi:', strategyEngineApi);
-console.log('[StrategyInstances] strategyEngineApi.list:', strategyEngineApi?.list);
+console.log('[StrategyInstances] strategyEngineApi:', strategyEngineApi)
+console.log('[StrategyInstances] strategyEngineApi.list:', strategyEngineApi?.list)
 
-const userStore = useUserStore();
-const instances = ref<InstanceInfo[]>([]);
-const strategies = ref<Strategy[]>([]);
-const loading = ref(false);
-const showStartDialog = ref(false);
-const starting = ref(false);
-const viewMode = ref<'card' | 'list'>('card');
-const formRef = ref<FormInstance>();
+const userStore = useUserStore()
+const instances = ref<InstanceInfo[]>([])
+const strategies = ref<Strategy[]>([])
+const loading = ref(false)
+const showStartDialog = ref(false)
+const starting = ref(false)
+const viewMode = ref<'card' | 'list'>('card')
+const formRef = ref<FormInstance>()
 
 const form = reactive({
   strategyId: '',
   parametersJson: '{}',
   symbols: [] as string[],
   timeframes: [] as string[],
-});
+})
 
 const rules: FormRules = {
   strategyId: [{ required: true, message: '请选择策略', trigger: 'change' }],
   symbols: [{ required: true, message: '请选择订阅交易对', trigger: 'change' }],
   timeframes: [{ required: true, message: '请选择订阅周期', trigger: 'change' }],
-};
+}
 
 // 当前选中的策略
 const selectedStrategy = computed(() => {
-  if (!form.strategyId) return null;
-  return strategies.value.find(s => s.id === form.strategyId) || null;
-});
+  if (!form.strategyId) return null
+  return strategies.value.find((s) => s.id === form.strategyId) || null
+})
 
 // 监听策略选择变化
-watch(() => form.strategyId, (newId) => {
-  if (newId && selectedStrategy.value?.parameters) {
-    // 如果策略有预定义参数，可以自动填充
-    if (selectedStrategy.value.parameters.length > 0) {
-      const params: Record<string, any> = {};
-      selectedStrategy.value.parameters.forEach(p => {
-        params[p.name] = p.default;
-      });
-      form.parametersJson = JSON.stringify(params, null, 2);
+watch(
+  () => form.strategyId,
+  (newId) => {
+    if (newId && selectedStrategy.value?.parameters) {
+      // 如果策略有预定义参数，可以自动填充
+      if (selectedStrategy.value.parameters.length > 0) {
+        const params: Record<string, any> = {}
+        selectedStrategy.value.parameters.forEach((p) => {
+          params[p.name] = p.default
+        })
+        form.parametersJson = JSON.stringify(params, null, 2)
+      }
     }
   }
-});
+)
 
 // 计算统计数据
-const runningCount = computed(() => instances.value.filter(i => i.status === 'Running').length);
-const pausedCount = computed(() => instances.value.filter(i => i.status === 'Paused').length);
-const stoppedCount = computed(() => instances.value.filter(i => i.status === 'Stopped').length);
-const errorCount = computed(() => instances.value.filter(i => i.status === 'Error').length);
+const runningCount = computed(() => instances.value.filter((i) => i.status === 'Running').length)
+const pausedCount = computed(() => instances.value.filter((i) => i.status === 'Paused').length)
+const stoppedCount = computed(() => instances.value.filter((i) => i.status === 'Stopped').length)
+const errorCount = computed(() => instances.value.filter((i) => i.status === 'Error').length)
 
-let refreshInterval: number | null = null;
+let refreshInterval: number | null = null
 
 // 获取实例列表
 const loadInstances = async () => {
-  console.log('[loadInstances] ===== START =====');
-  loading.value = true;
-  console.log('[loadInstances] loading set to true');
+  console.log('[loadInstances] ===== START =====')
+  loading.value = true
+  console.log('[loadInstances] loading set to true')
 
   try {
-    console.log('[loadInstances] Calling strategyEngineApi.list()...');
-    const result = await strategyEngineApi.list();
-    console.log('[loadInstances] Got result:', result);
-    console.log('[loadInstances] Result type:', typeof result);
-    console.log('[loadInstances] Is array:', Array.isArray(result));
+    console.log('[loadInstances] Calling strategyEngineApi.list()...')
+    const result = await strategyEngineApi.list()
+    console.log('[loadInstances] Got result:', result)
+    console.log('[loadInstances] Result type:', typeof result)
+    console.log('[loadInstances] Is array:', Array.isArray(result))
 
     if (Array.isArray(result)) {
-      instances.value = result;
-      console.log('[loadInstances] Set instances.value, length:', instances.value.length);
+      instances.value = result
+      console.log('[loadInstances] Set instances.value, length:', instances.value.length)
     } else {
-      console.error('[loadInstances] Result is not an array!', result);
+      console.error('[loadInstances] Result is not an array!', result)
     }
   } catch (error: any) {
-    console.error('[loadInstances] ===== ERROR =====');
-    console.error('[loadInstances] Error:', error);
-    console.error('[loadInstances] Error message:', error?.message);
-    console.error('[loadInstances] Error stack:', error?.stack);
-    ElMessage.error('加载实例列表失败: ' + (error?.message || 'Unknown error'));
+    console.error('[loadInstances] ===== ERROR =====')
+    console.error('[loadInstances] Error:', error)
+    console.error('[loadInstances] Error message:', error?.message)
+    console.error('[loadInstances] Error stack:', error?.stack)
+    ElMessage.error('加载实例列表失败: ' + (error?.message || 'Unknown error'))
   } finally {
-    loading.value = false;
-    console.log('[loadInstances] ===== FINALLY - loading set to false =====');
+    loading.value = false
+    console.log('[loadInstances] ===== FINALLY - loading set to false =====')
   }
-};
+}
 
 // 加载策略列表
 const loadStrategies = async () => {
-  const userId = userStore.user?.id;
+  const userId = userStore.user?.id
   if (!userId) {
-    ElMessage.error('请先登录');
-    return;
+    ElMessage.error('请先登录')
+    return
   }
 
   try {
-    const data = await strategyApi.list(userId);
-    console.log('Loaded strategies:', data);
+    const data = await strategyApi.list(userId)
+    console.log('Loaded strategies:', data)
     // 显示所有策略，包括草稿
-    strategies.value = data;
+    strategies.value = data
     if (data.length === 0) {
-      console.warn('No strategies found for user:', userId);
+      console.warn('No strategies found for user:', userId)
     }
   } catch (error) {
-    console.error('Failed to load strategies:', error);
-    ElMessage.error('加载策略列表失败: ' + (error as Error).message);
+    console.error('Failed to load strategies:', error)
+    ElMessage.error('加载策略列表失败: ' + (error as Error).message)
   }
-};
+}
 
 // 启动策略实例
 const startInstance = async () => {
-  if (!formRef.value) return;
+  if (!formRef.value) return
 
   // 检查用户是否已登录
   if (!userStore.user?.id) {
-    ElMessage.error('用户未登录，请先登录');
-    return;
+    ElMessage.error('用户未登录，请先登录')
+    return
   }
 
   await formRef.value.validate(async (valid) => {
-    if (!valid) return;
+    if (!valid) return
 
-    starting.value = true;
+    starting.value = true
     try {
-      let parameters: Record<string, any> = {};
+      let parameters: Record<string, any> = {}
       try {
-        parameters = JSON.parse(form.parametersJson);
+        parameters = JSON.parse(form.parametersJson)
       } catch {
-        ElMessage.error('策略参数JSON格式错误');
-        starting.value = false;
-        return;
+        ElMessage.error('策略参数JSON格式错误')
+        starting.value = false
+        return
       }
 
       // 使用选中的策略创建配置
-      const strategy = selectedStrategy.value;
+      const strategy = selectedStrategy.value
       if (!strategy) {
-        ElMessage.error('请选择策略');
-        starting.value = false;
-        return;
+        ElMessage.error('请选择策略')
+        starting.value = false
+        return
       }
 
       const config: StrategyConfig = {
@@ -571,42 +585,42 @@ const startInstance = async () => {
         parameters,
         symbols: form.symbols,
         timeframes: form.timeframes,
-      };
+      }
 
-      const instanceId = await strategyEngineApi.start(userStore.user?.id || '', config);
-      ElMessage.success(`策略实例已启动: ${instanceId}`);
-      showStartDialog.value = false;
-      resetForm();
-      await loadInstances();
+      const instanceId = await strategyEngineApi.start(userStore.user?.id || '', config)
+      ElMessage.success(`策略实例已启动: ${instanceId}`)
+      showStartDialog.value = false
+      resetForm()
+      await loadInstances()
     } catch (error: any) {
-      ElMessage.error('启动策略失败: ' + error.message);
+      ElMessage.error('启动策略失败: ' + error.message)
     } finally {
-      starting.value = false;
+      starting.value = false
     }
-  });
-};
+  })
+}
 
 // 暂停策略实例
 const pauseInstance = async (id: string) => {
   try {
-    await strategyEngineApi.pause(id);
-    ElMessage.success('策略实例已暂停');
-    await loadInstances();
+    await strategyEngineApi.pause(id)
+    ElMessage.success('策略实例已暂停')
+    await loadInstances()
   } catch (error: any) {
-    ElMessage.error('暂停策略失败: ' + error.message);
+    ElMessage.error('暂停策略失败: ' + error.message)
   }
-};
+}
 
 // 恢复策略实例
 const resumeInstance = async (id: string) => {
   try {
-    await strategyEngineApi.resume(id);
-    ElMessage.success('策略实例已恢复');
-    await loadInstances();
+    await strategyEngineApi.resume(id)
+    ElMessage.success('策略实例已恢复')
+    await loadInstances()
   } catch (error: any) {
-    ElMessage.error('恢复策略失败: ' + error.message);
+    ElMessage.error('恢复策略失败: ' + error.message)
   }
-};
+}
 
 // 停止策略实例
 const stopInstance = async (id: string) => {
@@ -615,31 +629,31 @@ const stopInstance = async (id: string) => {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
-    });
+    })
 
-    await strategyEngineApi.stop(id);
-    ElMessage.success('策略实例已停止');
-    await loadInstances();
+    await strategyEngineApi.stop(id)
+    ElMessage.success('策略实例已停止')
+    await loadInstances()
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('停止策略失败: ' + error.message);
+      ElMessage.error('停止策略失败: ' + error.message)
     }
   }
-};
+}
 
 // 查看实例详情
 const viewInstance = (_id: string) => {
-  ElMessage.info('实例详情功能开发中');
-};
+  ElMessage.info('实例详情功能开发中')
+}
 
 // 重置表单
 const resetForm = () => {
-  form.strategyId = '';
-  form.parametersJson = '{}';
-  form.symbols = [];
-  form.timeframes = [];
-  formRef.value?.resetFields();
-};
+  form.strategyId = ''
+  form.parametersJson = '{}'
+  form.symbols = []
+  form.timeframes = []
+  formRef.value?.resetFields()
+}
 
 // 辅助函数
 const getCategoryText = (category: string) => {
@@ -649,9 +663,9 @@ const getCategoryText = (category: string) => {
     arbitrage: '套利',
     grid: '网格交易',
     high_frequency: '高频交易',
-  };
-  return categoryMap[category] || category;
-};
+  }
+  return categoryMap[category] || category
+}
 
 const getStrategyStatusType = (status: string) => {
   const typeMap: Record<string, any> = {
@@ -659,9 +673,9 @@ const getStrategyStatusType = (status: string) => {
     testing: 'warning',
     active: 'success',
     archived: 'info',
-  };
-  return typeMap[status] || 'info';
-};
+  }
+  return typeMap[status] || 'info'
+}
 
 const getStrategyStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
@@ -669,9 +683,9 @@ const getStrategyStatusText = (status: string) => {
     testing: '测试中',
     active: '已激活',
     archived: '已归档',
-  };
-  return statusMap[status] || status;
-};
+  }
+  return statusMap[status] || status
+}
 
 // 获取状态文本
 const getStatusText = (status: string) => {
@@ -682,51 +696,51 @@ const getStatusText = (status: string) => {
     Stopping: '停止中',
     Stopped: '已停止',
     Error: '异常',
-  };
-  return textMap[status] || status;
-};
+  }
+  return textMap[status] || status
+}
 
 // 格式化运行时长
-const formatRuntime = (startTime?: string) => {
-  if (!startTime) return '--';
-  const start = new Date(startTime);
-  const now = new Date();
-  const diff = now.getTime() - start.getTime();
+const formatRuntime = (startTime?: number | string) => {
+  if (!startTime) return '--'
+  const start = typeof startTime === 'number' ? new Date(startTime) : new Date(startTime)
+  const now = new Date()
+  const diff = now.getTime() - start.getTime()
 
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
 
   if (hours > 24) {
-    const days = Math.floor(hours / 24);
-    return `${days}天${hours % 24}小时`;
+    const days = Math.floor(hours / 24)
+    return `${days}天${hours % 24}小时`
   }
   if (hours > 0) {
-    return `${hours}小时${minutes}分钟`;
+    return `${hours}小时${minutes}分钟`
   }
-  return `${minutes}分钟`;
-};
+  return `${minutes}分钟`
+}
 
 onMounted(() => {
-  console.log('[StrategyInstances] ===== Component MOUNTED =====');
-  console.log('[StrategyInstances] Calling loadInstances()...');
-  loadInstances();
-  console.log('[StrategyInstances] Calling loadStrategies()...');
-  loadStrategies();
+  console.log('[StrategyInstances] ===== Component MOUNTED =====')
+  console.log('[StrategyInstances] Calling loadInstances()...')
+  loadInstances()
+  console.log('[StrategyInstances] Calling loadStrategies()...')
+  loadStrategies()
   // 每5秒刷新一次实例列表
   refreshInterval = window.setInterval(() => {
-    console.log('[StrategyInstances] Interval: calling loadInstances()');
-    loadInstances();
-  }, 5000);
-  console.log('[StrategyInstances] Interval set up: 5000ms');
-});
+    console.log('[StrategyInstances] Interval: calling loadInstances()')
+    loadInstances()
+  }, 5000)
+  console.log('[StrategyInstances] Interval set up: 5000ms')
+})
 
 onUnmounted(() => {
-  console.log('[StrategyInstances] ===== Component UNMOUNTED =====');
+  console.log('[StrategyInstances] ===== Component UNMOUNTED =====')
   if (refreshInterval !== null) {
-    clearInterval(refreshInterval);
-    console.log('[StrategyInstances] Interval cleared');
+    clearInterval(refreshInterval)
+    console.log('[StrategyInstances] Interval cleared')
   }
-});
+})
 </script>
 
 <style scoped lang="scss">
@@ -927,7 +941,8 @@ onUnmounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

@@ -46,46 +46,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import { useUserStore, useNavigationStore } from '@/store';
-import { useLayoutState } from '@/composables/useLayoutState';
-import { useUserMenu } from '@/composables/useUserMenu';
-import AppSidebar from './layout/components/AppSidebar.vue';
-import AppHeader from './layout/components/AppHeader.vue';
-import RecentPagesDropdown from './layout/components/RecentPagesDropdown.vue';
-import UserDropdown from './layout/components/UserDropdown.vue';
-import MobileDrawer from './layout/components/MobileDrawer.vue';
-import CommandPalette from '@/components/CommandPalette.vue';
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useNavigationStore } from '@/store'
+import { useLayoutState } from '@/composables/useLayoutState'
+import { useUserMenu } from '@/composables/useUserMenu'
+import AppSidebar from './layout/components/AppSidebar.vue'
+import AppHeader from './layout/components/AppHeader.vue'
+import RecentPagesDropdown from './layout/components/RecentPagesDropdown.vue'
+import UserDropdown from './layout/components/UserDropdown.vue'
+import MobileDrawer from './layout/components/MobileDrawer.vue'
+import CommandPalette from '@/components/CommandPalette.vue'
 
-const route = useRoute();
-const userStore = useUserStore();
-const navigationStore = useNavigationStore();
-const { isCollapse, toggleCollapse, toggleTheme } = useLayoutState();
-const { notificationCount, showNotifications: showNotificationsMsg } = useUserMenu();
+const route = useRoute()
+const navigationStore = useNavigationStore()
+const { toggleCollapse, toggleTheme } = useLayoutState()
+const { notificationCount, showNotifications: showNotificationsMsg } = useUserMenu()
 
 // Local state
-const showCommandPalette = ref(false);
-const showRecent = ref(false);
-const showUser = ref(false);
-const mobileMenuOpen = ref(false);
+const showCommandPalette = ref(false)
+const showRecent = ref(false)
+const showUser = ref(false)
+const mobileMenuOpen = ref(false)
 
 // Track navigation history
 watch(
   () => route.path,
   (newPath) => {
-    navigationStore.addToHistory(newPath);
+    navigationStore.addToHistory(newPath)
   },
   { immediate: true } // Record initial page load
-);
+)
 
 // Methods
 function showNotifications() {
-  showNotificationsMsg();
+  showNotificationsMsg()
 }
 
 function toggleThemeWithMessage() {
-  toggleTheme();
+  toggleTheme()
   // ElMessage added in component
 }
 </script>

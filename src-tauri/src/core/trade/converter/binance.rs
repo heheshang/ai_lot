@@ -10,6 +10,12 @@ use serde_json::Value;
 /// Binance data converter
 pub struct BinanceConverter;
 
+impl Default for BinanceConverter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BinanceConverter {
     pub fn new() -> Self {
         Self
